@@ -1,27 +1,65 @@
+// server/index.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
+const EVENTS = require('./events');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// 1. Servir archivos estáticos desde la carpeta 'public'
-// Esto permite que al acceder a la IP del PC se carguen tus interfaces 
+
+// --- 2. ESTADO GLOBAL (En memoria, según el prompt) ---
+let listaGastos = [];
+
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 2. Gestión de conexiones con Socket.IO 
+// --- 3. GESTIÓN DE SOCKETS ---
 io.on('connection', (socket) => {
-    console.log('Dispositivo conectado: ' + socket.id);
+    console.log('Nuevo dispositivo conectado:', socket.id);
 
-    // Evento para recibir gestos de la "cartera" (móvil)
-    socket.on('gesto-cartera', (data) => {
-        console.log('Gesto recibido:', data.accion);
+    // A. Captura de Gesto (Shake detectado en el móvil)
+    socket.on('gesto-shake', () => {
+        console.log('Gesto SHAKE detectado. Iniciando captura...');
+        // Avisamos al móvil que debe empezar a escuchar voz
+        socket.emit(EVENTS.START_EXPENSE_CAPTURE);
+    });
+
+    // B. Recepción de nuevo gasto (Voz procesada en el móvil)
+    socket.on(EVENTS.EXPENSE_CREATED, (nuevoGasto) => {
+        console.log('Nuevo gasto recibido:', nuevoGasto);
         
-        // Reenviar el gesto a todos los demás dispositivos (ej. la pantalla)
-        // Esto cumple con el requisito de "comunicación en tiempo real" 
-        socket.broadcast.emit('ejecutar-accion', data);
+        // Guardar en el estado global
+        listaGastos.push(nuevoGasto);
+        
+        // Notificar a todos (especialmente al Display para que se actualice)
+        io.emit('update-display', listaGastos);
+        io.emit(EVENTS.EXPENSE_CREATED, nuevoGasto);
+    });
+
+    // C. Navegación (Gestos de inclinación/Tilt)
+    socket.on(EVENTS.NAVIGATE_LEFT, () => {
+        console.log('Navegando a la izquierda');
+        socket.broadcast.emit(EVENTS.NAVIGATE_LEFT);
+    });
+
+    socket.on(EVENTS.NAVIGATE_RIGHT, () => {
+        console.log('Navegando a la derecha');
+        socket.broadcast.emit(EVENTS.NAVIGATE_RIGHT);
+    });
+
+    // D. Acciones tipo Tinder
+    socket.on(EVENTS.MARK_LIKE, (data) => {
+        console.log('Gasto marcado como LIKE');
+        socket.broadcast.emit(EVENTS.MARK_LIKE, data);
+    });
+
+    socket.on(EVENTS.MARK_DISLIKE, (data) => {
+        console.log('Gasto marcado como DISLIKE');
+        socket.broadcast.emit(EVENTS.MARK_DISLIKE, data);
     });
 
     socket.on('disconnect', () => {
@@ -29,9 +67,10 @@ io.on('connection', (socket) => {
     });
 });
 
-// 3. Iniciar el servidor
+// --- 4. INICIO DEL SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`Para conectar el móvil, usa la IP de tu red local.`);
+    console.log(`\n--- Servidor de Cartera Inteligente ---`);
+    console.log(`Corriendo en: http://localhost:${PORT}`);
+    console.log(`Usa la IP de tu PC para conectar el móvil en la misma red.`);
 });
