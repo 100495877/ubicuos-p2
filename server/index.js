@@ -39,6 +39,9 @@ app.get('/', (req, res) => {
 });
 
 // ─── SOCKET HANDLERS ──────────────────────────────────────────────────────────
+let lastConfirmTime = 0;
+const CONFIRM_DEBOUNCE_MS = 2000;
+
 io.on('connection', (socket) => {
   const id = socket.id.slice(0, 6);
   console.log(`[+] Dispositivo conectado: ${id}`);
@@ -80,6 +83,9 @@ io.on('connection', (socket) => {
 
   // ── 4. CONFIRM ───────────────────────────────────────────────────────────
   socket.on(EVENTS.CONFIRM, () => {
+    const now = Date.now();
+    if (now - lastConfirmTime < CONFIRM_DEBOUNCE_MS) return;  // ← añadir esto
+    lastConfirmTime = now;
     console.log(`[${id}] CONFIRM  (modo: ${state.mode})`);
 
     if (state.mode === 'new_expense' && state.pendingExpense) {

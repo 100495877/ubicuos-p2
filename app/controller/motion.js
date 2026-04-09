@@ -113,6 +113,7 @@ function _initTilt(socket) {
 
       // ── CONFIRM (inclinar hacia adelante) ────────────────────────────────
       if (beta > TILT_FB_THRESHOLD) {
+        if (now - lastTiltTime < TILT_COOLDOWN_MS) return;
         lastTiltTime = now;
         console.log('[Motion] TILT FORWARD → CONFIRM', beta.toFixed(1));
         vibrateSuccess();

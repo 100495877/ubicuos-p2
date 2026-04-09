@@ -32,7 +32,7 @@ export const DOUBLE_SHAKE_WINDOW_MS = 700;
 export const TILT_LR_THRESHOLD  = 30;  // grados gamma (izq/dcha) → navegar
 export const TILT_FB_THRESHOLD  = 40;  // grados beta  (adelante)  → confirmar
 export const TILT_BACK_THRESHOLD = -30; // grados beta  (atrás)     → cancelar
-export const TILT_COOLDOWN_MS   = 800;
+export const TILT_COOLDOWN_MS   = 2000;
 
 // Inclinación fuerte para like/dislike en modo Tinder
 export const TILT_LIKE_THRESHOLD    = 50;  // gamma > +50 → LIKE
