@@ -2,68 +2,60 @@
 // Captura voz con Web Speech API y parsea comandos tipo "café 2.50 efectivo"
 // Modelo de gasto: { product, price, location, cash, like }
 
-import { EVENTS } from './constants.js';
 import { vibrateDouble, vibrateSuccess, vibrateLong, setStatus } from './feedback.js';
 
 let recognition = null;
 let listening    = false;
 
-// ── Crear instancia de reconocimiento ─────────────────────────────────────────
+// ── Crear instancia ───────────────────────────────────────────────────────────
 function createRecognition() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    console.warn('[Voice] Web Speech API no disponible en este navegador.');
-    return null;
-  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
 
   const r = new SpeechRecognition();
-  r.lang           = 'es-ES';
-  r.continuous     = false;
-  r.interimResults = false;
+  r.lang            = 'es-ES';
+  r.continuous      = false;
+  r.interimResults  = false;
   r.maxAlternatives = 3;
   return r;
 }
 
-// ── Parsear texto de voz en objeto gasto ─────────────────────────────────────
-// Ejemplos válidos:
-//   "café 2.5"
-//   "supermercado 34,90 efectivo"
-//   "gasolina 50 euros tarjeta"
-//   "farmacia 12.50"
+// ── Parsear texto de voz → objeto gasto ──────────────────────────────────────
+// Ejemplos: "café 2.5" | "supermercado 34,90 efectivo" | "gasolina 50 tarjeta"
 export function parseExpenseText(text) {
   const clean = text.trim().toLowerCase();
 
-  // Detectar método de pago
   const cash = /\b(efectivo|cash|en efectivo|metálico)\b/.test(clean);
 
-  // Extraer precio: último número en el texto (acepta punto o coma decimal)
-  const priceMatch = clean.match(/(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?/g);
-  if (!priceMatch || priceMatch.length === 0) return null;
+  const priceMatches = clean.match(/(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?/g);
+  if (!priceMatches || priceMatches.length === 0) return null;
 
-  const rawPrice = priceMatch[priceMatch.length - 1]
-    .replace(/euros?|€|eur/g, '')
-    .trim()
-    .replace(',', '.');
+  const rawPrice = priceMatches[priceMatches.length - 1]
+    .replace(/euros?|€|eur/g, '').trim().replace(',', '.');
   const price = parseFloat(rawPrice);
   if (isNaN(price) || price <= 0) return null;
 
-  // El producto es todo lo anterior al precio (quitando palabras de pago)
   const withoutPayment = clean
     .replace(/\b(efectivo|cash|en efectivo|metálico|tarjeta|con tarjeta)\b/g, '')
     .trim();
-
-  // Quitar el precio del final para obtener el nombre del producto
-  const pricePattern = /\s*(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?\s*$/;
-  const productRaw = withoutPayment.replace(pricePattern, '').trim();
-  const product = productRaw.charAt(0).toUpperCase() + productRaw.slice(1) || 'Gasto';
+  const productRaw = withoutPayment
+    .replace(/\s*(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?\s*$/, '')
+    .trim();
+  const product = productRaw
+    ? productRaw.charAt(0).toUpperCase() + productRaw.slice(1)
+    : 'Gasto';
 
   return { product, price, cash, location: '', like: null };
 }
 
 // ── Iniciar escucha ───────────────────────────────────────────────────────────
-export function startListening(socket, onResult, onError) {
+// onResult(gasto)  → se reconoció y parseó correctamente
+// onError(reason)  → fallo real del reconocedor (red, permiso, etc.)
+//
+// IMPORTANTE: cuando se reconoce texto pero no se puede parsear como gasto,
+// se muestra feedback al usuario pero NO se llama a onError.
+// Esto evita que el servidor reciba EXPENSE_CREATED(null).
+export function startListening(onResult, onError) {
   if (listening) {
     console.warn('[Voice] Ya está escuchando');
     return;
@@ -72,70 +64,67 @@ export function startListening(socket, onResult, onError) {
   recognition = createRecognition();
 
   if (!recognition) {
-    // Fallback: simular con prompt() para debug en desktop
+    // Fallback: prompt() para debug en escritorio
     const input = prompt('🎤 Voz simulada (ej: "café 2.50 efectivo"):');
     if (input) {
       const gasto = parseExpenseText(input);
-      if (gasto) { onResult(gasto); } else { onError('No se entendió el gasto'); }
-    } else {
-      onError('Cancelado');
+      if (gasto) {
+        onResult(gasto);
+      } else {
+        setStatus('⚠️ No se entendió');
+        // Parse fail: NO llamamos onError → el servidor no recibe null
+      }
     }
     return;
   }
 
   listening = true;
-  setStatus('🎤 Escuchando...');
+  setStatus('🎤 Escuchando…');
   vibrateDouble();
-
-  recognition.onstart = () => {
-    console.log('[Voice] Escucha iniciada');
-  };
 
   recognition.onresult = (event) => {
     listening = false;
-    let bestResult = null;
 
-    // Intentar todas las alternativas hasta encontrar una válida
+    // Probar cada alternativa hasta encontrar una parseable
     for (let alt = 0; alt < event.results[0].length; alt++) {
       const transcript = event.results[0][alt].transcript;
-      console.log(`[Voice] Alternativa ${alt}: "${transcript}"`);
-      const parsed = parseExpenseText(transcript);
-      if (parsed) {
-        bestResult = parsed;
-        break;
+      console.log(`[Voice] Alt ${alt}: "${transcript}"`);
+      const gasto = parseExpenseText(transcript);
+      if (gasto) {
+        vibrateSuccess();
+        setStatus(`✅ "${gasto.product}" ${gasto.price}€`);
+        onResult(gasto);
+        return;
       }
     }
 
-    if (bestResult) {
-      console.log('[Voice] Gasto parseado:', bestResult);
-      vibrateSuccess();
-      setStatus(`✅ "${bestResult.product}" ${bestResult.price}€`);
-      onResult(bestResult);
-    } else {
-      vibrateLong();
-      setStatus('⚠️ No entendido, intenta de nuevo');
-      onError('No se pudo parsear el gasto');
-    }
+    // Texto reconocido pero no parseable: feedback silencioso, sin propagar error
+    vibrateLong();
+    setStatus('⚠️ No se entendió — sacude de nuevo para reintentar');
+    console.warn('[Voice] Ninguna alternativa parseable');
   };
 
+  // Solo errores reales del reconocedor llegan a onError
   recognition.onerror = (event) => {
     listening = false;
-    console.error('[Voice] Error:', event.error);
+    if (event.error === 'no-speech') {
+      // No habló: tratarlo igual que parse fail, sin propagar
+      setStatus('⚠️ No se detectó voz — sacude para reintentar');
+      return;
+    }
     vibrateLong();
     setStatus(`❌ Error de voz: ${event.error}`);
+    console.error('[Voice] Error:', event.error);
     onError(event.error);
   };
 
-  recognition.onend = () => {
-    listening = false;
-    console.log('[Voice] Escucha finalizada');
-  };
+  recognition.onend = () => { listening = false; };
 
   try {
     recognition.start();
   } catch (e) {
     listening = false;
-    console.error('[Voice] No se pudo iniciar reconocimiento:', e);
+    console.error('[Voice] No se pudo iniciar:', e);
     onError(e.message);
   }
 }

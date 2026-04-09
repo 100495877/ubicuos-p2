@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Cartera — Controller</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -14,113 +14,189 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       min-height: 100dvh;
-      padding: 24px;
+      padding: 24px 20px 36px;
       user-select: none;
       -webkit-user-select: none;
     }
 
     .icon {
-      font-size: 64px;
-      margin-bottom: 16px;
+      font-size: 56px;
+      margin-bottom: 10px;
       animation: pulse 2s ease-in-out infinite;
     }
-
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
       50%       { opacity: 0.7; transform: scale(0.95); }
     }
 
     h1 {
-      font-size: 22px;
+      font-size: 18px;
       font-weight: 700;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
       color: #a0c4ff;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
     #mode {
-      font-size: 14px;
+      font-size: 13px;
       color: #6677aa;
-      margin-bottom: 32px;
+      margin-bottom: 12px;
       letter-spacing: 0.5px;
     }
 
+    /* Indicador persistente de método de pago */
+    .cash-badge {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+    .cash-card {
+      background: rgba(79, 195, 247, 0.12);
+      color: #4fc3f7;
+      border: 1px solid rgba(79, 195, 247, 0.3);
+    }
+    .cash-cash {
+      background: rgba(255, 213, 79, 0.12);
+      color: #ffd54f;
+      border: 1px solid rgba(255, 213, 79, 0.3);
+    }
+
     #status {
-      font-size: 16px;
+      font-size: 15px;
       color: #c8d8ff;
       text-align: center;
-      background: rgba(100, 149, 237, 0.1);
+      white-space: pre-line;
+      background: rgba(100, 149, 237, 0.08);
       border: 1px solid rgba(100, 149, 237, 0.2);
-      border-radius: 12px;
-      padding: 16px 24px;
-      min-height: 56px;
+      border-radius: 14px;
+      padding: 16px 20px;
+      min-height: 60px;
       width: 100%;
-      max-width: 320px;
+      max-width: 340px;
       line-height: 1.5;
       transition: all 0.3s ease;
     }
 
+    /* Tabla de gestos */
     .gestures {
-      margin-top: 40px;
+      margin-top: 28px;
       width: 100%;
-      max-width: 320px;
+      max-width: 340px;
+    }
+
+    .mode-section {
+      margin-bottom: 16px;
+    }
+
+    .mode-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #4fc3f7;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      padding-left: 4px;
     }
 
     .gesture-row {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 0;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 4px;
       border-bottom: 1px solid rgba(255,255,255,0.05);
       font-size: 13px;
-      color: #778899;
+      color: #7788aa;
+      line-height: 1.4;
     }
-
     .gesture-row:last-child { border-bottom: none; }
 
-    .gesture-icon {
-      width: 28px;
+    .g-icon {
+      width: 26px;
       text-align: center;
-      font-size: 18px;
+      font-size: 16px;
       flex-shrink: 0;
+      padding-top: 1px;
     }
+    .g-label strong { color: #99aacc; }
   </style>
 </head>
 <body>
 
   <div class="icon">💳</div>
   <h1>CARTERA INTELIGENTE</h1>
-  <p id="mode">Iniciando...</p>
+  <p id="mode">Iniciando…</p>
 
-  <div id="status">Conectando al servidor...</div>
+  <div id="cash-indicator" class="cash-badge cash-card">💳 Tarjeta</div>
+
+  <div id="status">Conectando al servidor…</div>
 
   <div class="gestures">
-    <div class="gesture-row">
-      <span class="gesture-icon">📳</span>
-      <span>Sacudir → Registrar gasto (voz)</span>
+
+    <div class="mode-section">
+      <div class="mode-label">🟢 En espera (idle)</div>
+      <div class="gesture-row">
+        <span class="g-icon">📳</span>
+        <span class="g-label"><strong>Sacudir</strong> → registrar gasto (activa micrófono)</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">↑</span>
+        <span class="g-label"><strong>Inclinar adelante</strong> → entrar en modo revisión (Tinder)</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">↔</span>
+        <span class="g-label"><strong>Inclinar a los lados</strong> → cambiar método de pago por defecto</span>
+      </div>
     </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">📳📳</span>
-      <span>Doble sacudida → Cambiar efectivo/tarjeta</span>
+
+    <div class="mode-section">
+      <div class="mode-label">🎤 Escuchando</div>
+      <div class="gesture-row">
+        <span class="g-icon">↓</span>
+        <span class="g-label"><strong>Inclinar atrás</strong> → cancelar grabación</span>
+      </div>
     </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">⬆️</span>
-      <span>Inclinar adelante → Confirmar</span>
+
+    <div class="mode-section">
+      <div class="mode-label">📝 Confirmar gasto</div>
+      <div class="gesture-row">
+        <span class="g-icon">↑</span>
+        <span class="g-label"><strong>Inclinar adelante</strong> → confirmar y guardar</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">↓</span>
+        <span class="g-label"><strong>Inclinar atrás</strong> → descartar gasto</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">↔</span>
+        <span class="g-label"><strong>Inclinar a los lados</strong> → repetir grabación de voz</span>
+      </div>
     </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">⬇️</span>
-      <span>Inclinar atrás → Cancelar</span>
+
+    <div class="mode-section">
+      <div class="mode-label">🃏 Modo revisión (Tinder)</div>
+      <div class="gesture-row">
+        <span class="g-icon">📳</span>
+        <span class="g-label"><strong>Sacudir</strong> → registrar nuevo gasto</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">→</span>
+        <span class="g-label"><strong>Inclinar a la derecha</strong> → me gusta</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">←</span>
+        <span class="g-label"><strong>Inclinar a la izquierda</strong> → no me gusta</span>
+      </div>
+      <div class="gesture-row">
+        <span class="g-icon">↓</span>
+        <span class="g-label"><strong>Inclinar atrás</strong> → salir de revisión</span>
+      </div>
     </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">➡️</span>
-      <span>Inclinar derecha → Navegar / Like</span>
-    </div>
-    <div class="gesture-row">
-      <span class="gesture-icon">⬅️</span>
-      <span>Inclinar izquierda → Navegar / Dislike</span>
-    </div>
+
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

@@ -12,10 +12,11 @@ const io     = new Server(server, { cors: { origin: '*' } });
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 let state = {
-  mode:           'idle',       // 'idle' | 'listening' | 'new_expense' | 'tinder'
-  gastos:         [],           // lista de gastos confirmados
-  pendingExpense: null,         // gasto en espera de confirmación
+  mode:           'idle',   // 'idle' | 'listening' | 'new_expense' | 'tinder'
+  gastos:         [],
+  pendingExpense: null,
   tinderIndex:    0,
+  defaultCash:    false,    // método de pago por defecto (false = tarjeta)
 };
 
 function broadcast(event, data) { io.emit(event, data); }
@@ -30,111 +31,101 @@ app.get('/', (req, res) => res.redirect('/display/'));
 io.on('connection', (socket) => {
   const id = socket.id.slice(0, 6);
   console.log(`[+] Dispositivo conectado: ${id}`);
-
   socket.emit(EVENTS.STATE_UPDATE, state);
 
-  // ── 1. SHAKE → iniciar captura de voz ───────────────────────────────────
-  // Solo actúa en idle y tinder
+  // ── 1. SHAKE → iniciar captura de voz ──────────────────────────────────
   socket.on(EVENTS.GESTO_SHAKE, () => {
     if (state.mode !== 'idle' && state.mode !== 'tinder') return;
     console.log(`[${id}] SHAKE → listening`);
-    state.mode = 'listening';
+    state.mode           = 'listening';
     state.pendingExpense = null;
     pushState();
     socket.emit(EVENTS.START_EXPENSE_CAPTURE);
   });
 
-  // ── 2. ENTER_TINDER (tilt adelante en idle) ──────────────────────────────
+  // ── 2. ENTER_TINDER (tilt adelante en idle) ────────────────────────────
   socket.on(EVENTS.ENTER_TINDER, () => {
     if (state.mode !== 'idle') return;
     if (state.gastos.length === 0) {
-      console.log(`[${id}] ENTER_TINDER ignorado — no hay gastos`);
-      socket.emit(EVENTS.STATE_UPDATE, state); // refrescar para que el móvil sepa
+      socket.emit(EVENTS.STATE_UPDATE, state); // refrescar sin cambiar modo
       return;
     }
     console.log(`[${id}] ENTER_TINDER → tinder`);
     state.tinderIndex = 0;
-    state.mode = 'tinder';
+    state.mode        = 'tinder';
     pushState();
   });
 
-  // ── 3. GASTO CREADO (voz procesada en móvil) ─────────────────────────────
-  // Al recibirlo pasamos a new_expense para que el usuario confirme/cancele/repita
+  // ── 3. GASTO CREADO (voz procesada en móvil) ───────────────────────────
   socket.on(EVENTS.EXPENSE_CREATED, (nuevoGasto) => {
-    console.log(`[${id}] EXPENSE_CREATED:`, nuevoGasto);
-
-    if (nuevoGasto) {
-      nuevoGasto.id        = Date.now();
-      nuevoGasto.timestamp = new Date().toISOString();
-      nuevoGasto.like      = null;
-      state.pendingExpense = nuevoGasto;
-    } else {
-      // Error de voz — pendingExpense null pero entramos en new_expense
-      // para que el usuario pueda repetir o cancelar
-      state.pendingExpense = null;
+    // voice.js garantiza que nuevoGasto nunca es null aquí,
+    // pero lo defendemos igualmente para robustez.
+    if (!nuevoGasto) {
+      console.warn(`[${id}] EXPENSE_CREATED con gasto nulo — ignorado`);
+      return;
     }
-
-    state.mode = 'new_expense';
+    console.log(`[${id}] EXPENSE_CREATED:`, nuevoGasto);
+    nuevoGasto.id        = Date.now();
+    nuevoGasto.timestamp = new Date().toISOString();
+    nuevoGasto.like      = null;
+    // Si la voz no detectó método de pago explícito, usar el por defecto
+    if (nuevoGasto.cash === false && state.defaultCash) {
+      nuevoGasto.cash = true;
+    }
+    state.pendingExpense = nuevoGasto;
+    state.mode           = 'new_expense';
     pushState();
   });
 
-  // ── 4. CONFIRM (tilt adelante en new_expense) ─────────────────────────────
+  // ── 4. CONFIRM (tilt adelante en new_expense) ──────────────────────────
   socket.on(EVENTS.CONFIRM, () => {
-    if (state.mode !== 'new_expense') return; // ignorar en otros modos
+    if (state.mode !== 'new_expense') return;
     console.log(`[${id}] CONFIRM`);
-
-    if (state.pendingExpense) {
-      state.gastos.push(state.pendingExpense);
-      console.log(`[${id}] Gasto guardado:`, state.pendingExpense);
-    }
+    if (state.pendingExpense) state.gastos.push(state.pendingExpense);
     state.pendingExpense = null;
-    state.mode = 'idle';
+    state.mode           = 'idle';
     pushState();
     broadcast(EVENTS.CONFIRM, {});
   });
 
-  // ── 5. CANCEL ─────────────────────────────────────────────────────────────
-  // En listening → volver a idle
-  // En new_expense → descartar gasto pendiente, volver a idle
-  // En tinder → volver a idle
-  // En idle → ignorar
+  // ── 5. CANCEL ──────────────────────────────────────────────────────────
   socket.on(EVENTS.CANCEL, () => {
     if (state.mode === 'idle') return;
     console.log(`[${id}] CANCEL (modo: ${state.mode})`);
-
     state.pendingExpense = null;
-    state.mode = 'idle';
+    state.mode           = 'idle';
     pushState();
     broadcast(EVENTS.CANCEL, {});
   });
 
-  // ── 6. REPEAT_CAPTURE (tilt lateral en new_expense) ──────────────────────
-  // Descarta el gasto pendiente y vuelve a listening
+  // ── 6. REPEAT_CAPTURE (tilt lateral en new_expense) ───────────────────
   socket.on(EVENTS.REPEAT_CAPTURE, () => {
     if (state.mode !== 'new_expense') return;
     console.log(`[${id}] REPEAT_CAPTURE → listening`);
-
     state.pendingExpense = null;
-    state.mode = 'listening';
+    state.mode           = 'listening';
     pushState();
     broadcast(EVENTS.REPEAT_CAPTURE, {});
-    socket.emit(EVENTS.START_EXPENSE_CAPTURE); // pedir nueva grabación al móvil
+    socket.emit(EVENTS.START_EXPENSE_CAPTURE);
   });
 
-  // ── 7. TOGGLE_CASH (tilt lateral en idle) ────────────────────────────────
+  // ── 7. TOGGLE_CASH ─────────────────────────────────────────────────────
+  // En idle: cambia el método de pago por defecto
+  // En new_expense: cambia el método del gasto pendiente
   socket.on(EVENTS.TOGGLE_CASH, () => {
-    console.log(`[${id}] TOGGLE_CASH`);
-    if (state.pendingExpense) {
+    console.log(`[${id}] TOGGLE_CASH (modo: ${state.mode})`);
+    if (state.mode === 'new_expense' && state.pendingExpense) {
       state.pendingExpense.cash = !state.pendingExpense.cash;
-      pushState();
+    } else {
+      state.defaultCash = !state.defaultCash;
     }
+    pushState();
     broadcast(EVENTS.TOGGLE_CASH, {});
   });
 
-  // ── 8. MARK LIKE / DISLIKE (tilt lateral en tinder) ──────────────────────
+  // ── 8. MARK LIKE / DISLIKE (tinder) ───────────────────────────────────
   socket.on(EVENTS.MARK_LIKE, () => {
     if (state.mode !== 'tinder') return;
-    console.log(`[${id}] MARK_LIKE`);
     const g = state.gastos[state.tinderIndex];
     if (g) g.like = true;
     pushState();
@@ -144,7 +135,6 @@ io.on('connection', (socket) => {
 
   socket.on(EVENTS.MARK_DISLIKE, () => {
     if (state.mode !== 'tinder') return;
-    console.log(`[${id}] MARK_DISLIKE`);
     const g = state.gastos[state.tinderIndex];
     if (g) g.like = false;
     pushState();
@@ -162,7 +152,7 @@ function _advanceTinder() {
   state.tinderIndex++;
   if (state.tinderIndex >= state.gastos.length) {
     state.tinderIndex = 0;
-    state.mode = 'idle';
+    state.mode        = 'idle';
   }
   pushState();
 }

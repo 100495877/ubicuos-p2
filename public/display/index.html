@@ -14,6 +14,10 @@
       <div class="logo">💳 CARTERA</div>
       <div id="connection-badge" class="badge badge-disconnected">● Desconectado</div>
     </div>
+    <div class="header-center">
+      <!-- Indicador persistente de método de pago por defecto -->
+      <div id="cash-indicator" class="cash-badge cash-card">💳 Tarjeta</div>
+    </div>
     <div class="header-right">
       <div id="clock"></div>
     </div>
@@ -23,14 +27,12 @@
   <section id="view-idle" class="view active">
     <div class="dashboard-grid">
 
-      <!-- Totales -->
       <div class="card card-total">
         <div class="card-label">TOTAL GASTADO</div>
         <div id="total-amount" class="amount-big">0,00 €</div>
         <div id="total-count" class="amount-sub">0 gastos registrados</div>
       </div>
 
-      <!-- Estadísticas rápidas -->
       <div class="card card-stats">
         <div class="card-label">RESUMEN</div>
         <div class="stats-row">
@@ -57,7 +59,6 @@
         </div>
       </div>
 
-      <!-- Lista de gastos -->
       <div class="card card-list">
         <div class="card-label">ÚLTIMOS GASTOS</div>
         <div id="expense-list" class="expense-list">
@@ -68,11 +69,10 @@
         </div>
       </div>
 
-      <!-- Instrucción modo tinder -->
       <div class="card card-hint" id="tinder-hint" style="display:none">
         <div class="card-label">MODO REVISIÓN</div>
         <div class="hint-text">
-          Inclina el móvil <strong>↑ adelante</strong> para revisar tus gastos
+          Inclina el móvil <strong>↑ adelante</strong> para revisar y evaluar tus gastos
         </div>
       </div>
 
@@ -88,6 +88,7 @@
       <div class="mic-icon">🎤</div>
       <div class="listening-title">ESCUCHANDO…</div>
       <div class="listening-hint">Di: <em>"café 2,50"</em> o <em>"supermercado 34 efectivo"</em></div>
+      <div class="listening-cancel-hint">↓ Inclina atrás para cancelar</div>
     </div>
   </section>
 
@@ -107,9 +108,9 @@
           <span>↓ Inclinar atrás</span>
           <strong>CANCELAR</strong>
         </div>
-        <div class="action-hint action-cash">
-          <span>📳📳 Doble sacudida</span>
-          <strong>CAMBIAR PAGO</strong>
+        <div class="action-hint action-repeat">
+          <span>↔ Inclinar a los lados</span>
+          <strong>REPETIR VOZ</strong>
         </div>
       </div>
     </div>
@@ -122,11 +123,8 @@
       <div id="tinder-progress" class="tinder-progress">1 / 1</div>
     </div>
     <div class="tinder-arena">
-      <!-- Indicadores de swipe -->
       <div id="tinder-like-indicator"    class="swipe-indicator si-like">💚 ME GUSTA</div>
       <div id="tinder-dislike-indicator" class="swipe-indicator si-dislike">❌ NO DESEADO</div>
-
-      <!-- Tarjeta principal -->
       <div id="tinder-card" class="tinder-card">
         <div id="tc-product" class="tc-product">—</div>
         <div id="tc-price"   class="tc-price">0,00 €</div>
@@ -134,9 +132,10 @@
       </div>
     </div>
     <div class="tinder-instructions">
-      <span>⬅️ Izquierda = No deseado</span>
-      <span>⬆️ Adelante = Saltar</span>
-      <span>Derecha = Me gusta ➡️</span>
+      <span>← Izquierda = No deseado</span>
+      <span>↔ Repetir voz</span>
+      <span>Derecha = Me gusta →</span>
+      <span>↓ Atrás = Salir</span>
     </div>
   </section>
 
