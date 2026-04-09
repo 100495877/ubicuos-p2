@@ -2,11 +2,126 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controller</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Cartera — Controller</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #e0e0ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.7; transform: scale(0.95); }
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #a0c4ff;
+      margin-bottom: 8px;
+    }
+
+    #mode {
+      font-size: 14px;
+      color: #6677aa;
+      margin-bottom: 32px;
+      letter-spacing: 0.5px;
+    }
+
+    #status {
+      font-size: 16px;
+      color: #c8d8ff;
+      text-align: center;
+      background: rgba(100, 149, 237, 0.1);
+      border: 1px solid rgba(100, 149, 237, 0.2);
+      border-radius: 12px;
+      padding: 16px 24px;
+      min-height: 56px;
+      width: 100%;
+      max-width: 320px;
+      line-height: 1.5;
+      transition: all 0.3s ease;
+    }
+
+    .gestures {
+      margin-top: 40px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .gesture-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+      color: #778899;
+    }
+
+    .gesture-row:last-child { border-bottom: none; }
+
+    .gesture-icon {
+      width: 28px;
+      text-align: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+  </style>
 </head>
 <body>
-  <p>Controller activo</p>
+
+  <div class="icon">💳</div>
+  <h1>CARTERA INTELIGENTE</h1>
+  <p id="mode">Iniciando...</p>
+
+  <div id="status">Conectando al servidor...</div>
+
+  <div class="gestures">
+    <div class="gesture-row">
+      <span class="gesture-icon">📳</span>
+      <span>Sacudir → Registrar gasto (voz)</span>
+    </div>
+    <div class="gesture-row">
+      <span class="gesture-icon">📳📳</span>
+      <span>Doble sacudida → Cambiar efectivo/tarjeta</span>
+    </div>
+    <div class="gesture-row">
+      <span class="gesture-icon">⬆️</span>
+      <span>Inclinar adelante → Confirmar</span>
+    </div>
+    <div class="gesture-row">
+      <span class="gesture-icon">⬇️</span>
+      <span>Inclinar atrás → Cancelar</span>
+    </div>
+    <div class="gesture-row">
+      <span class="gesture-icon">➡️</span>
+      <span>Inclinar derecha → Navegar / Like</span>
+    </div>
+    <div class="gesture-row">
+      <span class="gesture-icon">⬅️</span>
+      <span>Inclinar izquierda → Navegar / Dislike</span>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="./controller.js"></script>
