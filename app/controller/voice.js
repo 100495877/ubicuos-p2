@@ -33,29 +33,42 @@ function createRecognition() {
 //   "gasolina 50 euros tarjeta"
 //   "farmacia 12.50"
 export function parseExpenseText(text) {
-  const clean = text.trim().toLowerCase();
+  const clean = text.trim().toLowerCase()
+    .replace(/\bcon\b/g, '')          // "con tarjeta" → "tarjeta"
+    .replace(/\bpunto\b/g, '.')       // "dos punto cinco" → "dos.cinco"  
+    .replace(/\bcoma\b/g, '.')        // "dos coma cinco" → "dos.cinco"
+    .replace(/\beuros?\b|€|eur\b/g, '');
 
-  // Detectar método de pago
   const cash = /\b(efectivo|cash|en efectivo|metálico)\b/.test(clean);
 
-  // Extraer precio: último número en el texto (acepta punto o coma decimal)
-  const priceMatch = clean.match(/(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?/g);
-  if (!priceMatch || priceMatch.length === 0) return null;
+  // Buscar primero decimales explícitos (2.50, 2,50)
+  let priceMatch = clean.match(/\b(\d+[.,]\d{1,2})\b/);
+  let price;
 
-  const rawPrice = priceMatch[priceMatch.length - 1]
-    .replace(/euros?|€|eur/g, '')
-    .trim()
-    .replace(',', '.');
-  const price = parseFloat(rawPrice);
+  if (priceMatch) {
+    price = parseFloat(priceMatch[1].replace(',', '.'));
+  } else {
+    // Buscar dos números consecutivos separados por espacio → fusionar como decimal
+    // Ej: "cafe 2 50" → 2.50
+    const twoNums = clean.match(/(\d+)\s+(\d{1,2})(?:\s|$)/);
+    if (twoNums) {
+      price = parseFloat(`${twoNums[1]}.${twoNums[2]}`);
+    } else {
+      // Un solo número entero
+      const single = clean.match(/\b(\d+)\b/g);
+      if (!single) return null;
+      price = parseFloat(single[single.length - 1]);
+    }
+  }
+
   if (isNaN(price) || price <= 0) return null;
 
-  // El producto es todo lo anterior al precio (quitando palabras de pago)
+  // Quitar el precio y palabras de pago para extraer el producto
   const withoutPayment = clean
     .replace(/\b(efectivo|cash|en efectivo|metálico|tarjeta|con tarjeta)\b/g, '')
     .trim();
 
-  // Quitar el precio del final para obtener el nombre del producto
-  const pricePattern = /\s*(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?\s*$/;
+  const pricePattern = /\s*\d+[.,]?\d*\s*\d*\s*$/;
   const productRaw = withoutPayment.replace(pricePattern, '').trim();
   const product = productRaw.charAt(0).toUpperCase() + productRaw.slice(1) || 'Gasto';
 
