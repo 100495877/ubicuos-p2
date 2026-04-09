@@ -3,9 +3,9 @@
 
 import { socket }                            from './socket.js';
 import { initMotion, setCurrentMode }        from './motion.js';
-import { startListening }                    from './voice.js';
 import { EVENTS }                            from './constants.js';
 import { vibrateSuccess, setStatus, setMode } from './feedback.js';
+import { startListening, stopListening } from './voice.js';
 
 // ── Arranque ──────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
@@ -27,20 +27,20 @@ window.addEventListener('load', () => {
     setMode(modeLabels[state.mode] || state.mode);
   });
 
+  let currentGasto = null;
+  
   // ── El servidor pide iniciar captura de voz ─────────────────────────────
   socket.on(EVENTS.START_EXPENSE_CAPTURE, () => {
     console.log('[Controller] Iniciando captura de voz...');
     setStatus('🎤 Di tu gasto: "café 2.50"');
+    currentGasto = null;
 
     startListening(
       socket,
-      // Éxito: gasto parseado
       (gasto) => {
-        console.log('[Controller] Enviando gasto:', gasto);
-        socket.emit(EVENTS.EXPENSE_CREATED, gasto);
-        setStatus(`💳 Gasto enviado: ${gasto.product} ${gasto.price}€`);
+        currentGasto = gasto;                          // guardar pero NO emitir aún
+        setStatus(`💳 Listo: ${gasto.product} ${gasto.price}€ — inclina para confirmar`);
       },
-      // Error: no se entendió
       (err) => {
         console.warn('[Controller] Error de voz:', err);
         setStatus('⚠️ Sacude de nuevo para reintentar');
@@ -49,12 +49,23 @@ window.addEventListener('load', () => {
   });
 
   // ── Retroalimentación de acciones ───────────────────────────────────────
+  
   socket.on(EVENTS.CONFIRM, () => {
-    vibrateSuccess();
-    setStatus('✅ Confirmado');
+    stopListening();                                   // parar micro siempre
+    if (currentGasto) {
+      console.log('[Controller] Enviando gasto:', currentGasto);
+      socket.emit(EVENTS.EXPENSE_CREATED, currentGasto);
+      setStatus(`✅ Gasto guardado: ${currentGasto.product} ${currentGasto.price}€`);
+      currentGasto = null;
+    } else {
+      vibrateSuccess();
+      setStatus('✅ Confirmado');
+    }
   });
 
   socket.on(EVENTS.CANCEL, () => {
+    stopListening();                                   // parar micro también al cancelar
+    currentGasto = null;
     setStatus('❌ Cancelado');
   });
 

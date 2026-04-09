@@ -18,6 +18,8 @@ import {
 import { vibrateShort, vibrateDouble, vibrateSuccess, vibrateLong, setStatus } from './feedback.js';
 
 // ── Estado interno ────────────────────────────────────────────────────────────
+let tiltForwardActive = false;
+let tiltBackActive    = false;
 let lastShakeTime    = 0;
 let prevShakeTime    = 0;   // para detectar doble shake
 let lastTiltTime     = 0;
@@ -113,24 +115,37 @@ function _initTilt(socket) {
 
       // ── CONFIRM (inclinar hacia adelante) ────────────────────────────────
       if (beta > TILT_FB_THRESHOLD) {
-        if (now - lastTiltTime < TILT_COOLDOWN_MS) return;
-        lastTiltTime = now;
-        console.log('[Motion] TILT FORWARD → CONFIRM', beta.toFixed(1));
-        vibrateSuccess();
-        setStatus('✅ Confirmar');
-        socket.emit(EVENTS.CONFIRM);
+        if (!tiltForwardActive) {          // solo al entrar, no mientras se sostiene
+          tiltForwardActive = true;
+          tiltBackActive    = false;
+          if (now - lastTiltTime > TILT_COOLDOWN_MS) {
+            lastTiltTime = now;
+            console.log('[Motion] TILT FORWARD → CONFIRM', beta.toFixed(1));
+            vibrateSuccess();
+            setStatus('✅ Confirmar');
+            socket.emit(EVENTS.CONFIRM);
+          }
+        }
         return;
       }
 
       // ── CANCEL (inclinar hacia atrás) ────────────────────────────────────
       if (beta < TILT_BACK_THRESHOLD) {
-        lastTiltTime = now;
-        console.log('[Motion] TILT BACK → CANCEL', beta.toFixed(1));
-        vibrateLong();
-        setStatus('❌ Cancelar');
-        socket.emit(EVENTS.CANCEL);
+        if (!tiltBackActive) {             // solo al entrar, no mientras se sostiene
+          tiltBackActive    = true;
+          tiltForwardActive = false;
+          if (now - lastTiltTime > TILT_COOLDOWN_MS) {
+            lastTiltTime = now;
+            console.log('[Motion] TILT BACK → CANCEL', beta.toFixed(1));
+            vibrateLong();
+            setStatus('❌ Cancelar');
+            socket.emit(EVENTS.CANCEL);
+          }
+        }
         return;
       }
+      tiltForwardActive = false;
+      tiltBackActive    = false;
 
       // ── MARK_LIKE (inclinación fuerte dcha en modo tinder) ────────────────
       if (currentMode === 'tinder' && gamma > TILT_LIKE_THRESHOLD) {
@@ -153,7 +168,7 @@ function _initTilt(socket) {
       }
 
       // ── NAVIGATE_RIGHT (inclinación dcha moderada) ───────────────────────
-      if (gamma > TILT_LR_THRESHOLD) {
+      if (currentMode !== 'tinder' && gamma > TILT_LR_THRESHOLD) {
         lastTiltTime = now;
         console.log('[Motion] TILT RIGHT → NAVIGATE_RIGHT', gamma.toFixed(1));
         vibrateShort();
@@ -163,7 +178,7 @@ function _initTilt(socket) {
       }
 
       // ── NAVIGATE_LEFT (inclinación izda moderada) ────────────────────────
-      if (gamma < -TILT_LR_THRESHOLD) {
+      if (currentMode !== 'tinder' && gamma < -TILT_LR_THRESHOLD) {
         lastTiltTime = now;
         console.log('[Motion] TILT LEFT → NAVIGATE_LEFT', gamma.toFixed(1));
         vibrateShort();

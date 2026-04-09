@@ -35,5 +35,5 @@ export const TILT_BACK_THRESHOLD = -30; // grados beta  (atrás)     → cancela
 export const TILT_COOLDOWN_MS   = 2000;
 
 // Inclinación fuerte para like/dislike en modo Tinder
-export const TILT_LIKE_THRESHOLD    = 50;  // gamma > +50 → LIKE
-export const TILT_DISLIKE_THRESHOLD = -50; // gamma < -50 → DISLIKE
+export const TILT_LIKE_THRESHOLD    = 35;  // gamma > +50 → LIKE
+export const TILT_DISLIKE_THRESHOLD = -35; // gamma < -50 → DISLIKE
