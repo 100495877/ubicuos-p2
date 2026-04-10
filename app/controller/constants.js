@@ -25,7 +25,7 @@ export const SHAKE_THRESHOLD    = 18;   // m/s² magnitud total
 export const SHAKE_COOLDOWN_MS  = 1200; // tiempo mínimo entre shakes
 
 // Orientación (tilt) – DeviceOrientationEvent
-export const TILT_LR_THRESHOLD   = 30;  // grados gamma (izq/dcha)
-export const TILT_FB_THRESHOLD   = 40;  // grados beta  (adelante)
-export const TILT_BACK_THRESHOLD = -30; // grados beta  (atrás)
+export const TILT_LR_THRESHOLD   = 70;  // grados gamma (izq/dcha)
+export const TILT_FB_THRESHOLD   = 50;  // grados beta  (adelante)
+export const TILT_BACK_THRESHOLD = -40; // grados beta  (atrás)
 export const TILT_COOLDOWN_MS    = 1500;
