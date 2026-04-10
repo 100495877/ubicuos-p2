@@ -3,6 +3,8 @@
 // Modelo de gasto: { product, price, location, cash, like }
 
 import { vibrateDouble, vibrateSuccess, vibrateLong, setStatus } from './feedback.js';
+import GetNumberFromWord from 'spanish-word-to-number';
+import { toWords } from 'to-words';
 
 let recognition = null;
 let listening    = false;
@@ -20,10 +22,30 @@ function createRecognition() {
   return r;
 }
 
+// ── Traducir numeros con letras a numeros con digitos ─────────────────────────
+function numberLetterToDigit(text) {
+  text.replace(/\b\d+\b/g, (coincidencia) => { return toWords(parseInt(coincidencia), {localeCode: "es-ES"})});
+  for (var i = 0; i < text.length; i++) {
+    for (var j = text.length; j > i; j--) {
+      var substring = text.substring(i, j);
+      var digits = GetNumberFromWord(substring, {includeThousands: true})
+      if (digits["result"] == "No se encontró el número") {
+        continue;
+      } else {
+        text = text.replace(substring, digits["result"].toString());
+        return numberLetterToDigit(text);
+      }
+    }
+  }
+  return text;
+}
+
 // ── Parsear texto de voz → objeto gasto ──────────────────────────────────────
 // Ejemplos: "café 2.5" | "supermercado 34,90 efectivo" | "gasolina 50 tarjeta"
 export function parseExpenseText(text) {
   const clean = text.trim().toLowerCase();
+
+  clean = numberLetterToDigit(clean);
 
   const cash = /\b(efectivo|cash|en efectivo|metálico)\b/.test(clean);
 

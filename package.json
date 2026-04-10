@@ -22,6 +22,8 @@
   "homepage": "https://github.com/100495877/ubicuos-p2#readme",
   "dependencies": {
     "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "spanish-word-to-number": "^0.1.1",
+    "to-words": "^5.4.0"
   }
 }
