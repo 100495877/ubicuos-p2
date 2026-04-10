@@ -1,30 +1,40 @@
 // app/controller/motion.js
-// Detecta:
-//   - Shake  → START_EXPENSE_CAPTURE
-//   - Double shake → TOGGLE_CASH
-//   - Tilt derecha  (gamma > TILT_LR)  → NAVIGATE_RIGHT o MARK_LIKE
-//   - Tilt izquierda(gamma < -TILT_LR) → NAVIGATE_LEFT  o MARK_DISLIKE
-//   - Inclinación fuerte dcha (gamma > TILT_LIKE)    → MARK_LIKE
-//   - Inclinación fuerte izda (gamma < TILT_DISLIKE)  → MARK_DISLIKE
-//   - Tilt adelante (beta > TILT_FB)   → CONFIRM
-//   - Tilt atrás    (beta < TILT_BACK) → CANCEL
+//
+// MAPA DE GESTOS POR MODO:
+//
+//  idle        → shake            : GESTO_SHAKE (→ listening)
+//  idle        → tilt adelante    : ENTER_TINDER
+//  idle        → tilt izq/dcha   : TOGGLE_CASH
+//  idle        → tilt atrás      : (ignorado)
+//
+//  listening   → tilt atrás      : CANCEL
+//  listening   → cualquier otro  : (ignorado)
+//
+//  new_expense → tilt adelante   : CONFIRM
+//  new_expense → tilt atrás      : CANCEL
+//  new_expense → tilt izq/dcha   : REPEAT_CAPTURE (vuelve a listening)
+//
+//  tinder      → shake            : GESTO_SHAKE (→ listening)
+//  tinder      → tilt dcha       : MARK_LIKE
+//  tinder      → tilt izq        : MARK_DISLIKE
+//  tinder      → tilt atrás      : CANCEL (salir → idle)
+//  tinder      → tilt adelante   : (ignorado)
 
 import {
   EVENTS,
-  SHAKE_THRESHOLD, SHAKE_COOLDOWN_MS, DOUBLE_SHAKE_WINDOW_MS,
+  SHAKE_THRESHOLD, SHAKE_COOLDOWN_MS,
   TILT_LR_THRESHOLD, TILT_FB_THRESHOLD, TILT_BACK_THRESHOLD, TILT_COOLDOWN_MS,
-  TILT_LIKE_THRESHOLD, TILT_DISLIKE_THRESHOLD,
 } from './constants.js';
 import { vibrateShort, vibrateDouble, vibrateSuccess, vibrateLong, setStatus } from './feedback.js';
 
 // ── Estado interno ────────────────────────────────────────────────────────────
+let lastShakeTime     = 0;
+let lastTiltTime      = 0;
 let tiltForwardActive = false;
 let tiltBackActive    = false;
-let lastShakeTime    = 0;
-let prevShakeTime    = 0;   // para detectar doble shake
-let lastTiltTime     = 0;
-let tiltActive       = false; // true mientras el dispositivo está inclinado
-let currentMode      = 'idle'; // reflejo local del modo del servidor
+let tiltLeftActive    = false;
+let tiltRightActive   = false;
+let currentMode       = 'idle';
 
 export function setCurrentMode(mode) {
   currentMode = mode;
@@ -45,27 +55,18 @@ function _initShake(socket) {
     const now = Date.now();
 
     if (mag > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN_MS) {
-      // Comprobar doble shake
-      if (now - prevShakeTime < DOUBLE_SHAKE_WINDOW_MS) {
-        // ── DOBLE SHAKE → toggle efectivo ───────────────────────────────
-        console.log('[Motion] DOUBLE SHAKE →', EVENTS.GESTO_DOUBLE_SHAKE);
-        vibrateDouble();
-        setStatus('💵 Método de pago alternado');
-        socket.emit(EVENTS.GESTO_DOUBLE_SHAKE);
-        prevShakeTime = 0;
-      } else {
-        // ── SHAKE SIMPLE → iniciar captura ──────────────────────────────
+      // Shake solo actúa en idle y tinder
+      if (currentMode === 'idle' || currentMode === 'tinder') {
         console.log('[Motion] SHAKE →', EVENTS.GESTO_SHAKE, mag.toFixed(1));
         vibrateShort();
         setStatus('📳 Shake detectado');
         socket.emit(EVENTS.GESTO_SHAKE);
-        prevShakeTime = lastShakeTime;
+        lastShakeTime = now;
       }
-      lastShakeTime = now;
     }
   };
 
-  // Intentar API moderna primero
+  // API moderna primero
   if (typeof Accelerometer !== 'undefined') {
     try {
       const sensor = new Accelerometer({ frequency: 30 });
@@ -79,7 +80,6 @@ function _initShake(socket) {
     }
   }
 
-  // Fallback: DeviceMotionEvent
   const startListening = () => {
     window.addEventListener('devicemotion', (event) => {
       handler(event.accelerationIncludingGravity || event.acceleration);
@@ -87,7 +87,6 @@ function _initShake(socket) {
     console.log('[Motion] DeviceMotionEvent iniciado');
   };
 
-  // iOS 13+ requiere permiso explícito
   if (typeof DeviceMotionEvent !== 'undefined' &&
       typeof DeviceMotionEvent.requestPermission === 'function') {
     document.addEventListener('click', async () => {
@@ -107,83 +106,111 @@ function _initShake(socket) {
 function _initTilt(socket) {
   const startListening = () => {
     window.addEventListener('deviceorientation', (event) => {
-      const beta  = event.beta  || 0;  // front/back tilt  (-180…180)
-      const gamma = event.gamma || 0;  // left/right tilt  (-90…90)
+      const beta  = event.beta  || 0;
+      const gamma = event.gamma || 0;
       const now   = Date.now();
+
+      const inForward = beta  >  TILT_FB_THRESHOLD;
+      const inBack    = beta  <  TILT_BACK_THRESHOLD;
+      const inRight   = gamma >  TILT_LR_THRESHOLD;
+      const inLeft    = gamma < -TILT_LR_THRESHOLD;
+
+      // Resetear flags al salir de zona
+      if (!inForward) tiltForwardActive = false;
+      if (!inBack)    tiltBackActive    = false;
+      if (!inRight)   tiltRightActive   = false;
+      if (!inLeft)    tiltLeftActive    = false;
 
       if (now - lastTiltTime < TILT_COOLDOWN_MS) return;
 
-      // ── CONFIRM (inclinar hacia adelante) ────────────────────────────────
-      if (beta > TILT_FB_THRESHOLD) {
-        if (!tiltForwardActive) {          // solo al entrar, no mientras se sostiene
-          tiltForwardActive = true;
-          tiltBackActive    = false;
-          if (now - lastTiltTime > TILT_COOLDOWN_MS) {
-            lastTiltTime = now;
-            console.log('[Motion] TILT FORWARD → CONFIRM', beta.toFixed(1));
-            vibrateSuccess();
-            setStatus('✅ Confirmar');
-            socket.emit(EVENTS.CONFIRM);
-          }
+      // ── IDLE ──────────────────────────────────────────────────────────────
+      if (currentMode === 'idle') {
+        if (inForward && !tiltForwardActive) {
+          tiltForwardActive = true; lastTiltTime = now;
+          console.log('[Motion] IDLE: TILT FORWARD → ENTER_TINDER');
+          vibrateSuccess(); setStatus('🃏 Entrando en Tinder...');
+          socket.emit(EVENTS.ENTER_TINDER);
+          return;
+        }
+        if ((inRight && !tiltRightActive) || (inLeft && !tiltLeftActive)) {
+          if (inRight) tiltRightActive = true;
+          if (inLeft)  tiltLeftActive  = true;
+          lastTiltTime = now;
+          console.log('[Motion] IDLE: TILT SIDE → TOGGLE_CASH');
+          vibrateShort(); setStatus('💳 Cambiar método de pago');
+          socket.emit(EVENTS.TOGGLE_CASH);
+          return;
+        }
+        // tilt atrás ignorado en idle
+        return;
+      }
+
+      // ── LISTENING ─────────────────────────────────────────────────────────
+      if (currentMode === 'listening') {
+        if (inBack && !tiltBackActive) {
+          tiltBackActive = true; lastTiltTime = now;
+          console.log('[Motion] LISTENING: TILT BACK → CANCEL');
+          vibrateLong(); setStatus('❌ Cancelar grabación');
+          socket.emit(EVENTS.CANCEL);
+          return;
+        }
+        // cualquier otro gesto ignorado en listening
+        return;
+      }
+
+      // ── NEW_EXPENSE (fase de confirmación) ────────────────────────────────
+      if (currentMode === 'new_expense') {
+        if (inForward && !tiltForwardActive) {
+          tiltForwardActive = true; lastTiltTime = now;
+          console.log('[Motion] NEW_EXPENSE: TILT FORWARD → CONFIRM');
+          vibrateSuccess(); setStatus('✅ Confirmar gasto');
+          socket.emit(EVENTS.CONFIRM);
+          return;
+        }
+        if (inBack && !tiltBackActive) {
+          tiltBackActive = true; lastTiltTime = now;
+          console.log('[Motion] NEW_EXPENSE: TILT BACK → CANCEL');
+          vibrateLong(); setStatus('❌ Cancelar gasto');
+          socket.emit(EVENTS.CANCEL);
+          return;
+        }
+        if ((inRight && !tiltRightActive) || (inLeft && !tiltLeftActive)) {
+          if (inRight) tiltRightActive = true;
+          if (inLeft)  tiltLeftActive  = true;
+          lastTiltTime = now;
+          console.log('[Motion] NEW_EXPENSE: TILT SIDE → REPEAT_CAPTURE');
+          vibrateDouble(); setStatus('🔄 Repitiendo grabación...');
+          socket.emit(EVENTS.REPEAT_CAPTURE);
+          return;
         }
         return;
       }
 
-      // ── CANCEL (inclinar hacia atrás) ────────────────────────────────────
-      if (beta < TILT_BACK_THRESHOLD) {
-        if (!tiltBackActive) {             // solo al entrar, no mientras se sostiene
-          tiltBackActive    = true;
-          tiltForwardActive = false;
-          if (now - lastTiltTime > TILT_COOLDOWN_MS) {
-            lastTiltTime = now;
-            console.log('[Motion] TILT BACK → CANCEL', beta.toFixed(1));
-            vibrateLong();
-            setStatus('❌ Cancelar');
-            socket.emit(EVENTS.CANCEL);
-          }
+      // ── TINDER ────────────────────────────────────────────────────────────
+      if (currentMode === 'tinder') {
+        if (inRight && !tiltRightActive) {
+          tiltRightActive = true; lastTiltTime = now;
+          console.log('[Motion] TINDER: TILT RIGHT → MARK_LIKE');
+          vibrateDouble(); setStatus('💚 Me gusta');
+          socket.emit(EVENTS.MARK_LIKE);
+          return;
         }
+        if (inLeft && !tiltLeftActive) {
+          tiltLeftActive = true; lastTiltTime = now;
+          console.log('[Motion] TINDER: TILT LEFT → MARK_DISLIKE');
+          vibrateLong(); setStatus('❤️‍🔥 No me gusta');
+          socket.emit(EVENTS.MARK_DISLIKE);
+          return;
+        }
+        if (inBack && !tiltBackActive) {
+          tiltBackActive = true; lastTiltTime = now;
+          console.log('[Motion] TINDER: TILT BACK → CANCEL (salir)');
+          vibrateLong(); setStatus('🚪 Saliendo de Tinder');
+          socket.emit(EVENTS.CANCEL);
+          return;
+        }
+        // tilt adelante ignorado en tinder
         return;
-      }
-      tiltForwardActive = false;
-      tiltBackActive    = false;
-
-      // ── MARK_LIKE (inclinación fuerte dcha en modo tinder) ────────────────
-      if (currentMode === 'tinder' && gamma > TILT_LIKE_THRESHOLD) {
-        lastTiltTime = now;
-        console.log('[Motion] TILT STRONG RIGHT → MARK_LIKE', gamma.toFixed(1));
-        vibrateDouble();
-        setStatus('💚 Me gusta');
-        socket.emit(EVENTS.MARK_LIKE);
-        return;
-      }
-
-      // ── MARK_DISLIKE (inclinación fuerte izda en modo tinder) ─────────────
-      if (currentMode === 'tinder' && gamma < TILT_DISLIKE_THRESHOLD) {
-        lastTiltTime = now;
-        console.log('[Motion] TILT STRONG LEFT → MARK_DISLIKE', gamma.toFixed(1));
-        vibrateLong();
-        setStatus('❤️‍🔥 No me gusta');
-        socket.emit(EVENTS.MARK_DISLIKE);
-        return;
-      }
-
-      // ── NAVIGATE_RIGHT (inclinación dcha moderada) ───────────────────────
-      if (currentMode !== 'tinder' && gamma > TILT_LR_THRESHOLD) {
-        lastTiltTime = now;
-        console.log('[Motion] TILT RIGHT → NAVIGATE_RIGHT', gamma.toFixed(1));
-        vibrateShort();
-        setStatus('➡️  Navegar derecha');
-        socket.emit(EVENTS.NAVIGATE_RIGHT);
-        return;
-      }
-
-      // ── NAVIGATE_LEFT (inclinación izda moderada) ────────────────────────
-      if (currentMode !== 'tinder' && gamma < -TILT_LR_THRESHOLD) {
-        lastTiltTime = now;
-        console.log('[Motion] TILT LEFT → NAVIGATE_LEFT', gamma.toFixed(1));
-        vibrateShort();
-        setStatus('⬅️  Navegar izquierda');
-        socket.emit(EVENTS.NAVIGATE_LEFT);
       }
     });
     console.log('[Motion] DeviceOrientationEvent iniciado');

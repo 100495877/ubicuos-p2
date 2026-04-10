@@ -1,87 +1,74 @@
 // app/controller/controller.js
 // Orquestador principal: conecta motion, voice y socket.
 
-import { socket }                            from './socket.js';
-import { initMotion, setCurrentMode }        from './motion.js';
-import { EVENTS }                            from './constants.js';
-import { vibrateSuccess, setStatus, setMode } from './feedback.js';
-import { startListening, stopListening } from './voice.js';
+import { socket }                              from './socket.js';
+import { initMotion, setCurrentMode }          from './motion.js';
+import { EVENTS }                              from './constants.js';
+import { vibrateSuccess, setStatus, setMode, setCash } from './feedback.js';
+import { startListening, stopListening }       from './voice.js';
 
-// ── Arranque ──────────────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   console.log('[Controller] Inicializado');
   setStatus('Conectando...');
-
-  // Iniciar detección de movimiento
   initMotion(socket);
 
-  // ── Recibir estado global del servidor ──────────────────────────────────
+  // ── Estado global del servidor ───────────────────────────────────────────
   socket.on('state_update', (state) => {
     setCurrentMode(state.mode);
+    setCash(state.defaultCash);
+
     const modeLabels = {
       idle:         '💤 En espera',
       listening:    '🎤 Escuchando',
-      new_expense:  '📝 Nuevo gasto',
-      tinder:       '🃏 Modo Tinder',
+      new_expense:  '📝 Confirmar gasto',
+      tinder:       '🃏 Modo Revisión',
     };
     setMode(modeLabels[state.mode] || state.mode);
   });
 
-  let currentGasto = null;
-  
-  // ── El servidor pide iniciar captura de voz ─────────────────────────────
+  // ── El servidor activa la captura de voz ─────────────────────────────────
   socket.on(EVENTS.START_EXPENSE_CAPTURE, () => {
     console.log('[Controller] Iniciando captura de voz...');
-    setStatus('🎤 Di tu gasto: "café 2.50"');
-    currentGasto = null;
+    stopListening();
 
     startListening(
-      socket,
+      // Éxito: gasto parseado correctamente
       (gasto) => {
-        currentGasto = gasto;                          // guardar pero NO emitir aún
-        setStatus(`💳 Listo: ${gasto.product} ${gasto.price}€ — inclina para confirmar`);
+        socket.emit(EVENTS.EXPENSE_CREATED, gasto);
+        setStatus(`📝 "${gasto.product}" ${gasto.price}€\n↑ Adelante: confirmar  ↓ Atrás: cancelar`);
       },
+      // Error real del reconocedor (permiso, red…): volver a idle
       (err) => {
-        console.warn('[Controller] Error de voz:', err);
-        setStatus('⚠️ Sacude de nuevo para reintentar');
+        console.warn('[Controller] Error de reconocimiento:', err);
+        socket.emit(EVENTS.CANCEL);
+        // setStatus ya fue actualizado dentro de voice.js
       }
     );
   });
 
-  // ── Retroalimentación de acciones ───────────────────────────────────────
-  
+  // ── Confirmación ─────────────────────────────────────────────────────────
   socket.on(EVENTS.CONFIRM, () => {
-    stopListening();                                   // parar micro siempre
-    if (currentGasto) {
-      console.log('[Controller] Enviando gasto:', currentGasto);
-      socket.emit(EVENTS.EXPENSE_CREATED, currentGasto);
-      setStatus(`✅ Gasto guardado: ${currentGasto.product} ${currentGasto.price}€`);
-      currentGasto = null;
-    } else {
-      vibrateSuccess();
-      setStatus('✅ Confirmado');
-    }
+    vibrateSuccess();
+    setStatus('✅ Gasto guardado');
   });
 
+  // ── Cancelación ──────────────────────────────────────────────────────────
   socket.on(EVENTS.CANCEL, () => {
-    stopListening();                                   // parar micro también al cancelar
-    currentGasto = null;
-    setStatus('❌ Cancelado');
+    stopListening();
+    setStatus('❌ Cancelado — sacude para registrar un gasto');
   });
 
-  socket.on(EVENTS.MARK_LIKE, () => {
-    setStatus('💚 ¡Buen gasto!');
+  // ── Repetir captura ──────────────────────────────────────────────────────
+  socket.on(EVENTS.REPEAT_CAPTURE, () => {
+    setStatus('🔄 Preparando nueva grabación…');
   });
 
-  socket.on(EVENTS.MARK_DISLIKE, () => {
-    setStatus('❤️‍🔥 Gasto no deseado');
-  });
-
-  socket.on(EVENTS.TOGGLE_CASH, () => {
-    setStatus('💵 Método de pago cambiado');
-  });
+  // ── Tinder feedback ──────────────────────────────────────────────────────
+  socket.on(EVENTS.MARK_LIKE,    () => setStatus('💚 ¡Buen gasto!'));
+  socket.on(EVENTS.MARK_DISLIKE, () => setStatus('❌ Gasto no deseado'));
+  socket.on(EVENTS.TOGGLE_CASH,  () => setStatus('💳 Método de pago cambiado'));
 
   socket.on('connect', () => {
-    setStatus('📱 Controller listo — Sacude para registrar');
+    setStatus('📱 Controller listo — sacude para registrar un gasto');
   });
 });
