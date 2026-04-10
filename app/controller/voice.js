@@ -3,8 +3,8 @@
 // Modelo de gasto: { product, price, location, cash, like }
 
 import { vibrateDouble, vibrateSuccess, vibrateLong, setStatus } from './feedback.js';
-import GetNumberFromWord from 'spanish-word-to-number';
-import { toWords } from 'to-words';
+//const { GetNumberFromWord } = require('spanish-word-to-number');
+//const { toWords } = require('to-words');
 
 let recognition = null;
 let listening    = false;
