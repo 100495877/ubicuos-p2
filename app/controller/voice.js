@@ -1,19 +1,16 @@
 // app/controller/voice.js
-// Captura voz con Web Speech API y parsea comandos tipo "café 2.50 efectivo"
-// Modelo de gasto: { product, price, location, cash, like }
+// Captura voz con Web Speech API y parsea comandos de gasto en español.
+// La conversión de palabras numéricas a cifras está integrada — sin librerías externas.
 
 import { vibrateDouble, vibrateSuccess, vibrateLong, setStatus } from './feedback.js';
-//const { GetNumberFromWord } = require('spanish-word-to-number');
-//const { toWords } = require('to-words');
 
 let recognition = null;
 let listening    = false;
 
-// ── Crear instancia ───────────────────────────────────────────────────────────
+// ── Crear instancia de reconocimiento ────────────────────────────────────────
 function createRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return null;
-
   const r = new SpeechRecognition();
   r.lang            = 'es-ES';
   r.continuous      = false;
@@ -22,34 +19,129 @@ function createRecognition() {
   return r;
 }
 
-// ── Traducir numeros con letras a numeros con digitos ─────────────────────────
-function numberLetterToDigit(text) {
-  text.replace(/\b\d+\b/g, (coincidencia) => { return toWords(parseInt(coincidencia), {localeCode: "es-ES"})});
-  for (var i = 0; i < text.length; i++) {
-    for (var j = text.length; j > i; j--) {
-      var substring = text.substring(i, j);
-      var digits = GetNumberFromWord(substring, {includeThousands: true})
-      if (digits["result"] == "No se encontró el número") {
-        continue;
-      } else {
-        text = text.replace(substring, digits["result"].toString());
-        return numberLetterToDigit(text);
+// ── Diccionarios de palabras numéricas ───────────────────────────────────────
+const UNIDADES = {
+  cero:0, un:1, uno:1, una:1, dos:2, tres:3, cuatro:4, cinco:5,
+  seis:6, siete:7, ocho:8, nueve:9, diez:10, once:11, doce:12,
+  trece:13, catorce:14, quince:15, 'dieciséis':16, dieciseis:16,
+  diecisiete:17, dieciocho:18, diecinueve:19, veinte:20,
+  'veintiún':21, veintiuno:21, 'veintidós':22, veintidos:22,
+  'veintitrés':23, veintitres:23, veinticuatro:24, veinticinco:25,
+  'veintiséis':26, veintiseis:26, veintisiete:27, veintiocho:28, veintinueve:29,
+};
+const DECENAS = {
+  treinta:30, cuarenta:40, cincuenta:50, sesenta:60,
+  setenta:70, ochenta:80, noventa:90,
+};
+const CENTENAS = {
+  cien:100, ciento:100,
+  doscientos:200, doscientas:200, trescientos:300, trescientas:300,
+  cuatrocientos:400, cuatrocientas:400, quinientos:500, quinientas:500,
+  seiscientos:600, seiscientas:600, setecientos:700, setecientas:700,
+  ochocientos:800, ochocientas:800, novecientos:900, novecientas:900,
+};
+
+// Consume tokens numéricos desde el inicio del array.
+// Regla clave: si después de una unidad simple (1-9) aparece una decena sin "y",
+// se para — evita fusionar "dos cincuenta" en 52.
+function wordsToNumber(tokens) {
+  let total = 0, current = 0, i = 0;
+  let lastWasSimpleUnit = false;
+
+  while (i < tokens.length) {
+    const t = tokens[i];
+
+    if (t === 'mil') {
+      current = current === 0 ? 1 : current;
+      total  += current * 1000;
+      current = 0; lastWasSimpleUnit = false; i++; continue;
+    }
+    if (t === 'y') { lastWasSimpleUnit = false; i++; continue; }
+
+    if (CENTENAS[t] !== undefined) {
+      if (lastWasSimpleUnit) break;
+      current += CENTENAS[t]; lastWasSimpleUnit = false; i++; continue;
+    }
+    if (DECENAS[t] !== undefined) {
+      if (lastWasSimpleUnit) break; // "dos cincuenta" → para tras "dos"
+      current += DECENAS[t]; lastWasSimpleUnit = false; i++; continue;
+    }
+    if (UNIDADES[t] !== undefined) {
+      if (lastWasSimpleUnit) break;
+      const v = UNIDADES[t];
+      current += v;
+      lastWasSimpleUnit = v >= 1 && v <= 9; // solo unidades puras, no diez/once...
+      i++; continue;
+    }
+    break;
+  }
+
+  return { value: total + current, consumed: i };
+}
+
+// Recorre el texto token a token y reemplaza secuencias de palabras numéricas
+// por su equivalente en cifras. Detecta decimales con "con / coma / punto".
+// Ejemplos:
+//   "café dos con cincuenta"              → "café 2.50"
+//   "supermercado treinta y cuatro euros" → "supermercado 34 euros"
+//   "farmacia doce con cincuenta"         → "farmacia 12.50"
+//   "gasolina mil doscientos"             → "gasolina 1200"
+//   "setenta y cinco con veinte"          → "75.20"
+function wordsToDigits(text) {
+  const DECIMAL_SEP = /^(con|coma|punto)$/;
+  const tokens = text.split(/\s+/);
+  const out = [];
+  let i = 0;
+
+  while (i < tokens.length) {
+    const ft = tokens[i].toLowerCase();
+    const startsNumber =
+      UNIDADES[ft] !== undefined ||
+      DECENAS[ft]  !== undefined ||
+      CENTENAS[ft] !== undefined ||
+      ft === 'mil';
+
+    if (startsNumber) {
+      const { value: intPart, consumed: c1 } =
+        wordsToNumber(tokens.slice(i).map(t => t.toLowerCase()));
+      i += c1;
+
+      let fullNumber = String(intPart);
+
+      // ¿Sigue separador decimal + más palabras numéricas?
+      if (i < tokens.length && DECIMAL_SEP.test(tokens[i].toLowerCase())) {
+        i++; // saltar "con/coma/punto"
+        const { value: decPart, consumed: c2 } =
+          wordsToNumber(tokens.slice(i).map(t => t.toLowerCase()));
+        if (c2 > 0) {
+          const decStr = decPart < 10 ? '0' + decPart : String(decPart);
+          fullNumber = intPart + '.' + decStr;
+          i += c2;
+        }
       }
+
+      out.push(fullNumber);
+    } else {
+      out.push(tokens[i]);
+      i++;
     }
   }
-  return text;
+
+  return out.join(' ');
 }
 
 // ── Parsear texto de voz → objeto gasto ──────────────────────────────────────
-// Ejemplos: "café 2.5" | "supermercado 34,90 efectivo" | "gasolina 50 tarjeta"
-export function parseExpenseText(text) {
-  const clean = text.trim().toLowerCase();
+// Acepta dígitos directos ("café 2.50") o palabras ("café dos con cincuenta").
+export function parseExpenseText(rawText) {
+  // 1. Convertir palabras numéricas a cifras
+  const converted = wordsToDigits(rawText.trim().toLowerCase());
+  console.log(`[Voice] "${rawText}" → "${converted}"`);
 
-  clean = numberLetterToDigit(clean);
+  // 2. Detectar método de pago
+  const cash = /\b(efectivo|cash|en efectivo|metálico)\b/.test(converted);
 
-  const cash = /\b(efectivo|cash|en efectivo|metálico)\b/.test(clean);
-
-  const priceMatches = clean.match(/(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?/g);
+  // 3. Extraer precio (último número del texto)
+  const priceMatches = converted.match(/(\d+[.,]\d{1,2}|\d+)\s*(euros?|€|eur)?/g);
   if (!priceMatches || priceMatches.length === 0) return null;
 
   const rawPrice = priceMatches[priceMatches.length - 1]
@@ -57,7 +149,8 @@ export function parseExpenseText(text) {
   const price = parseFloat(rawPrice);
   if (isNaN(price) || price <= 0) return null;
 
-  const withoutPayment = clean
+  // 4. Nombre del producto: lo que queda antes del precio
+  const withoutPayment = converted
     .replace(/\b(efectivo|cash|en efectivo|metálico|tarjeta|con tarjeta)\b/g, '')
     .trim();
   const productRaw = withoutPayment
@@ -71,12 +164,6 @@ export function parseExpenseText(text) {
 }
 
 // ── Iniciar escucha ───────────────────────────────────────────────────────────
-// onResult(gasto)  → se reconoció y parseó correctamente
-// onError(reason)  → fallo real del reconocedor (red, permiso, etc.)
-//
-// IMPORTANTE: cuando se reconoce texto pero no se puede parsear como gasto,
-// se muestra feedback al usuario pero NO se llama a onError.
-// Esto evita que el servidor reciba EXPENSE_CREATED(null).
 export function startListening(onResult, onError) {
   if (listening) {
     console.warn('[Voice] Ya está escuchando');
@@ -86,16 +173,12 @@ export function startListening(onResult, onError) {
   recognition = createRecognition();
 
   if (!recognition) {
-    // Fallback: prompt() para debug en escritorio
+    // Fallback: prompt() en escritorio
     const input = prompt('🎤 Voz simulada (ej: "café 2.50 efectivo"):');
     if (input) {
       const gasto = parseExpenseText(input);
-      if (gasto) {
-        onResult(gasto);
-      } else {
-        setStatus('⚠️ No se entendió');
-        // Parse fail: NO llamamos onError → el servidor no recibe null
-      }
+      if (gasto) { onResult(gasto); }
+      else        { setStatus('⚠️ No se entendió — sacude para reintentar'); }
     }
     return;
   }
@@ -106,7 +189,6 @@ export function startListening(onResult, onError) {
 
   recognition.onresult = (event) => {
     listening = false;
-
     // Probar cada alternativa hasta encontrar una parseable
     for (let alt = 0; alt < event.results[0].length; alt++) {
       const transcript = event.results[0][alt].transcript;
@@ -119,18 +201,15 @@ export function startListening(onResult, onError) {
         return;
       }
     }
-
-    // Texto reconocido pero no parseable: feedback silencioso, sin propagar error
     vibrateLong();
     setStatus('⚠️ No se entendió — sacude de nuevo para reintentar');
     console.warn('[Voice] Ninguna alternativa parseable');
   };
 
-  // Solo errores reales del reconocedor llegan a onError
   recognition.onerror = (event) => {
     listening = false;
-    if (event.error === 'no-speech') {
-      // No habló: tratarlo igual que parse fail, sin propagar
+    // 'no-speech' y 'aborted' son esperables y no constituyen errores reales
+    if (event.error === 'no-speech' || event.error === 'aborted') {
       setStatus('⚠️ No se detectó voz — sacude para reintentar');
       return;
     }
