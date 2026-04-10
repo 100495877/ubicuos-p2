@@ -18,14 +18,27 @@ export const EVENTS = {
   REPEAT_CAPTURE:         'repeat_capture',
 };
 
-// ── Umbrales de movimiento ──────────────────────────────────────────────────
+// ── Shake ─────────────────────────────────────────────────────────────────────
+export const SHAKE_THRESHOLD   = 18;    // m/s² magnitud total
+export const SHAKE_COOLDOWN_MS = 1200;  // ms mínimo entre shakes
 
-// Acelerómetro (shake)
-export const SHAKE_THRESHOLD    = 18;   // m/s² magnitud total
-export const SHAKE_COOLDOWN_MS  = 1200; // tiempo mínimo entre shakes
+// ── Calibración ───────────────────────────────────────────────────────────────
+// Número de muestras de DeviceOrientationEvent para calcular el offset inicial.
+// A ~10 eventos/s → 30 muestras ≈ 3 segundos de calibración.
+export const CALIBRATION_SAMPLES = 30;
 
-// Orientación (tilt) – DeviceOrientationEvent
-export const TILT_LR_THRESHOLD   = 70;  // grados gamma (izq/dcha)
-export const TILT_FB_THRESHOLD   = 50;  // grados beta  (adelante)
-export const TILT_BACK_THRESHOLD = -40; // grados beta  (atrás)
-export const TILT_COOLDOWN_MS    = 1500;
+// ── Tilt — umbrales RELATIVOS (desviación desde posición de reposo) ───────────
+// Estos valores son desviaciones en grados desde el punto cero calibrado,
+// NO ángulos absolutos. Ajústalos si los gestos resultan demasiado sensibles
+// o insensibles para tu caso de uso.
+
+export const TILT_FB_THRESHOLD   = 35;  // °β hacia adelante para CONFIRM/ENTER_TINDER
+export const TILT_BACK_THRESHOLD = 40;  // °β hacia atrás   para CANCEL (positivo, se niega en código)
+export const TILT_LR_THRESHOLD   = 45;  // °γ izq o dcha    para LIKE/DISLIKE/TOGGLE_CASH
+
+// Zona muerta central: ignorar pequeñas vibraciones o temblores de mano.
+// Gestos solo se procesan cuando beta o gamma supera este valor relativo.
+export const TILT_DEADZONE       = 8;   // °, cualquier eje
+
+// Tiempo mínimo entre dos gestos de tilt consecutivos.
+export const TILT_COOLDOWN_MS    = 1200;

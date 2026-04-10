@@ -45,34 +45,25 @@
       letter-spacing: 0.5px;
     }
 
-    /* Indicador persistente de método de pago */
     .cash-badge {
       font-size: 13px;
       font-weight: 700;
       padding: 4px 14px;
       border-radius: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       letter-spacing: 0.5px;
       transition: all 0.3s ease;
     }
-    .cash-card {
-      background: rgba(79, 195, 247, 0.12);
-      color: #4fc3f7;
-      border: 1px solid rgba(79, 195, 247, 0.3);
-    }
-    .cash-cash {
-      background: rgba(255, 213, 79, 0.12);
-      color: #ffd54f;
-      border: 1px solid rgba(255, 213, 79, 0.3);
-    }
+    .cash-card { background: rgba(79,195,247,0.12); color: #4fc3f7; border: 1px solid rgba(79,195,247,0.3); }
+    .cash-cash { background: rgba(255,213,79,0.12); color: #ffd54f; border: 1px solid rgba(255,213,79,0.3); }
 
     #status {
       font-size: 15px;
       color: #c8d8ff;
       text-align: center;
       white-space: pre-line;
-      background: rgba(100, 149, 237, 0.08);
-      border: 1px solid rgba(100, 149, 237, 0.2);
+      background: rgba(100,149,237,0.08);
+      border: 1px solid rgba(100,149,237,0.2);
       border-radius: 14px;
       padding: 16px 20px;
       min-height: 60px;
@@ -80,18 +71,28 @@
       max-width: 340px;
       line-height: 1.5;
       transition: all 0.3s ease;
+      margin-bottom: 12px;
     }
 
-    /* Tabla de gestos */
-    .gestures {
-      margin-top: 28px;
-      width: 100%;
-      max-width: 340px;
+    /* Botón de recalibración */
+    #btn-recalibrate {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1px solid rgba(160,196,255,0.3);
+      background: rgba(160,196,255,0.08);
+      color: #a0c4ff;
+      cursor: pointer;
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
     }
+    #btn-recalibrate:active { background: rgba(160,196,255,0.2); }
 
-    .mode-section {
-      margin-bottom: 16px;
-    }
+    .gestures { width: 100%; max-width: 340px; }
+
+    .mode-section { margin-bottom: 16px; }
 
     .mode-label {
       font-size: 10px;
@@ -115,13 +116,7 @@
     }
     .gesture-row:last-child { border-bottom: none; }
 
-    .g-icon {
-      width: 26px;
-      text-align: center;
-      font-size: 16px;
-      flex-shrink: 0;
-      padding-top: 1px;
-    }
+    .g-icon { width: 26px; text-align: center; font-size: 16px; flex-shrink: 0; padding-top: 1px; }
     .g-label strong { color: #99aacc; }
   </style>
 </head>
@@ -129,11 +124,13 @@
 
   <div class="icon">💳</div>
   <h1>CARTERA INTELIGENTE</h1>
-  <p id="mode">Iniciando…</p>
+  <p id="mode">Calibrando…</p>
 
   <div id="cash-indicator" class="cash-badge cash-card">💳 Tarjeta</div>
 
-  <div id="status">Conectando al servidor…</div>
+  <div id="status">🔄 Calibrando sensores…\nMantén el móvil en posición normal (3 s)</div>
+
+  <button id="btn-recalibrate">🔄 Recalibrar sensores</button>
 
   <div class="gestures">
 
@@ -141,15 +138,15 @@
       <div class="mode-label">🟢 En espera (idle)</div>
       <div class="gesture-row">
         <span class="g-icon">📳</span>
-        <span class="g-label"><strong>Sacudir</strong> → registrar gasto (activa micrófono)</span>
+        <span class="g-label"><strong>Sacudir</strong> → registrar gasto</span>
       </div>
       <div class="gesture-row">
         <span class="g-icon">↑</span>
-        <span class="g-label"><strong>Inclinar adelante</strong> → entrar en modo revisión (Tinder)</span>
+        <span class="g-label"><strong>Inclinar adelante</strong> → modo revisión (Tinder)</span>
       </div>
       <div class="gesture-row">
         <span class="g-icon">↔</span>
-        <span class="g-label"><strong>Inclinar a los lados</strong> → cambiar método de pago por defecto</span>
+        <span class="g-label"><strong>Inclinar a los lados</strong> → cambiar método de pago</span>
       </div>
     </div>
 
@@ -173,7 +170,7 @@
       </div>
       <div class="gesture-row">
         <span class="g-icon">↔</span>
-        <span class="g-label"><strong>Inclinar a los lados</strong> → repetir grabación de voz</span>
+        <span class="g-label"><strong>Inclinar a los lados</strong> → repetir grabación</span>
       </div>
     </div>
 
@@ -185,11 +182,11 @@
       </div>
       <div class="gesture-row">
         <span class="g-icon">→</span>
-        <span class="g-label"><strong>Inclinar a la derecha</strong> → me gusta</span>
+        <span class="g-label"><strong>Inclinar derecha</strong> → me gusta</span>
       </div>
       <div class="gesture-row">
         <span class="g-icon">←</span>
-        <span class="g-label"><strong>Inclinar a la izquierda</strong> → no me gusta</span>
+        <span class="g-label"><strong>Inclinar izquierda</strong> → no me gusta</span>
       </div>
       <div class="gesture-row">
         <span class="g-icon">↓</span>
@@ -198,9 +195,6 @@
     </div>
 
   </div>
-
-  <script type="module"> import spanishWordToNumber from 'https://cdn.jsdelivr.net/npm/spanish-word-to-number@0.1.1/+esm'</script>
-  <script src="https://cdn.jsdelivr.net/npm/to-words/dist/umd/to-words.min.js"></script>
 
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="./controller.js"></script>
