@@ -125,7 +125,7 @@
       const metaParts = [
         g.cash ? '💵 Efectivo' : '💳 Tarjeta',
         g.location ? '📍 ' + g.location : null,
-        g.timestamp ? '🗓 ' + fmtDate(g.timestamp) : null,
+        g.timestamp ? '⏰ ' + fmtDate(g.timestamp) : null,
       ].filter(Boolean);
       return `
         <div class="expense-item ${likeClass}">
@@ -182,7 +182,7 @@
     const metaParts = [
       g.cash ? '💵 Efectivo' : '💳 Tarjeta',
       g.location ? '📍 ' + g.location : null,
-      g.timestamp ? '🗓 ' + fmtDate(g.timestamp) : null,
+      g.timestamp ? '⏰ ' + fmtDate(g.timestamp) : null,
     ].filter(Boolean);
     els.tcMeta.textContent         = metaParts.join(' · ');
     els.tinderProgress.textContent = `${index + 1} / ${gastos.length}`;
