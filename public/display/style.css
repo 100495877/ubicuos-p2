@@ -615,3 +615,107 @@ body::before {
   justify-content: center;
   gap: 8px 20px;
 }
+
+/* ── INDICADOR DE TOPE EN CABECERA ──────────────────────────────────────── */
+.budget-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  margin-left: 8px;
+}
+.budget-none    { background: rgba(100,100,120,0.2); color: #6677aa; border: 1px solid rgba(100,100,120,0.3); }
+.budget-ok      { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+.budget-warning { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+.budget-danger  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+
+/* ── BANNER DE ALERTA DE TOPE ────────────────────────────────────────────── */
+.budget-alert-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  padding: 14px 24px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  transform: translateY(-100%);
+  transition: transform 0.4s ease;
+  border-radius: 0 0 12px 12px;
+}
+.budget-alert-banner.show { transform: translateY(0); }
+
+/* ── VISTA: TOPE DE GASTO ────────────────────────────────────────────────── */
+.budget-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 40px 32px;
+  min-height: calc(100vh - 70px);
+}
+
+.budget-title {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #a0c4ff;
+}
+
+.budget-amounts {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.budget-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(100,149,237,0.08);
+  border: 1px solid rgba(100,149,237,0.15);
+  border-radius: 12px;
+}
+
+.budget-label { font-size: 14px; color: #6677aa; }
+.budget-value { font-size: 22px; font-weight: 700; color: #e0e0ff; }
+
+.budget-bar-track {
+  width: 100%;
+  max-width: 480px;
+  height: 16px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.6s ease, background 0.3s;
+}
+.bar-ok      { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.bar-warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.bar-danger  { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.budget-status-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #c8d8ff;
+  letter-spacing: 0.5px;
+}
+
+.budget-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 560px;
+}

@@ -1,60 +1,85 @@
 // app/controller/controller.js
-// Orquestador principal: conecta motion, voice y socket.
-
-import { socket }                                    from './socket.js';
-import { initMotion, setCurrentMode, recalibrate }   from './motion.js';
-import { EVENTS }                                    from './constants.js';
+import { socket }                                      from './socket.js';
+import { initMotion, setCurrentMode, recalibrate }     from './motion.js';
+import { EVENTS }                                      from './constants.js';
 import { vibrateSuccess, setStatus, setMode, setCash } from './feedback.js';
-import { startListening, stopListening }             from './voice.js';
+import { startListening, startListeningAmount, stopListening } from './voice.js';
 
 window.addEventListener('load', () => {
   console.log('[Controller] Inicializado');
-
   initMotion(socket);
 
-  // Botón de recalibración manual
-  document.getElementById('btn-recalibrate')?.addEventListener('click', () => {
-    recalibrate();
-  });
+  document.getElementById('btn-recalibrate')?.addEventListener('click', recalibrate);
 
-  // ── Estado global del servidor ───────────────────────────────────────────
+  // ── Estado global ────────────────────────────────────────────────────────
   socket.on('state_update', (state) => {
     setCurrentMode(state.mode);
     setCash(state.defaultCash);
-    const modeLabels = {
+    const labels = {
       idle:        '💤 En espera',
       listening:   '🎤 Escuchando',
       new_expense: '📝 Confirmar gasto',
       tinder:      '🃏 Modo Revisión',
+      budget:      '💰 Tope de gasto',
     };
-    setMode(modeLabels[state.mode] || state.mode);
+    setMode(labels[state.mode] || state.mode);
+
+    // Si entramos en budget con tope existente, indicar opciones al usuario
+    if (state.mode === 'budget' && state.budget) {
+      setStatus(`💰 Tope actual: ${state.budget}€\n↑ Adelante: aceptar  ↔ Lados: editar  ↓ Atrás: cancelar`);
+    }
   });
 
-  // ── El servidor activa la captura de voz ─────────────────────────────────
+  // ── Captura de gasto ─────────────────────────────────────────────────────
   socket.on(EVENTS.START_EXPENSE_CAPTURE, () => {
-    console.log('[Controller] Iniciando captura de voz...');
+    console.log('[Controller] Iniciando captura de voz…');
     stopListening();
-
     startListening(
       (gasto) => {
         socket.emit(EVENTS.EXPENSE_CREATED, gasto);
-        setStatus(`📝 "${gasto.product}" ${gasto.price}€\n↑ Adelante: confirmar  ↓ Atrás: cancelar`);
+        setStatus(`📝 "${gasto.product}" ${gasto.price}€\n↑ Confirmar  ↓ Cancelar  ↔ Repetir`);
       },
       (err) => {
-        console.warn('[Controller] Error de reconocimiento:', err);
+        console.warn('[Controller] Error voz:', err);
         socket.emit(EVENTS.CANCEL);
       }
     );
   });
 
-  socket.on(EVENTS.CONFIRM,       () => { vibrateSuccess(); setStatus('✅ Gasto guardado'); });
-  socket.on(EVENTS.CANCEL,        () => { stopListening(); setStatus('❌ Cancelado — sacude para registrar'); });
-  socket.on(EVENTS.REPEAT_CAPTURE,() => { setStatus('🔄 Preparando nueva grabación…'); });
-  socket.on(EVENTS.MARK_LIKE,     () => setStatus('💚 ¡Buen gasto!'));
-  socket.on(EVENTS.MARK_DISLIKE,  () => setStatus('❌ Gasto no deseado'));
-  socket.on(EVENTS.TOGGLE_CASH,   () => setStatus('💳 Método de pago cambiado'));
-
-  socket.on('connect', () => {
-    setStatus('📱 Calibrando… mantén el móvil quieto');
+  // ── Captura de tope de gasto ─────────────────────────────────────────────
+  socket.on(EVENTS.START_BUDGET_CAPTURE, () => {
+    console.log('[Controller] Capturando tope de gasto…');
+    stopListening();
+    setStatus('🎤 Di la cantidad límite\n(ej: "doscientos euros")');
+    startListeningAmount(
+      (amount) => {
+        socket.emit(EVENTS.SET_BUDGET, amount);
+        setStatus(`💰 Tope fijado: ${amount}€`);
+      },
+      (err) => {
+        console.warn('[Controller] Error captura tope:', err);
+        setStatus('⚠️ No se entendió — inclina atrás para cancelar');
+      }
+    );
   });
+
+  // ── Alertas de tope ──────────────────────────────────────────────────────
+  socket.on(EVENTS.BUDGET_ALERT, (data) => {
+    const patterns = {
+      danger:  [200, 100, 200, 100, 200],
+      warning: [150, 80, 150],
+      info:    [100],
+    };
+    if ('vibrate' in navigator) navigator.vibrate(patterns[data.level] || [100]);
+    setStatus(`${data.label}\n${data.total.toFixed(2)}€ / ${data.budget}€`);
+  });
+
+  // ── Eventos estándar ─────────────────────────────────────────────────────
+  socket.on(EVENTS.CONFIRM,        () => { vibrateSuccess(); setStatus('✅ Confirmado'); });
+  socket.on(EVENTS.CANCEL,         () => { stopListening(); setStatus('❌ Cancelado — sacude para registrar'); });
+  socket.on(EVENTS.REPEAT_CAPTURE, () => setStatus('🔄 Preparando nueva grabación…'));
+  socket.on(EVENTS.MARK_LIKE,      () => setStatus('💚 ¡Buen gasto!'));
+  socket.on(EVENTS.MARK_DISLIKE,   () => setStatus('❌ Gasto no deseado'));
+  socket.on(EVENTS.TOGGLE_CASH,    () => setStatus('💳 Método de pago cambiado'));
+  socket.on('connect',             () => setStatus('📱 Calibrando… mantén el móvil quieto'));
 });

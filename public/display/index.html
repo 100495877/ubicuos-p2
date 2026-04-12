@@ -8,6 +8,9 @@
 </head>
 <body>
 
+  <!-- ── BANNER DE ALERTA DE TOPE ─────────────────────────────────────────── -->
+  <div id="budget-alert-banner" class="budget-alert-banner"></div>
+
   <!-- ── CABECERA ─────────────────────────────────────────────────────────── -->
   <header id="header">
     <div class="header-left">
@@ -15,8 +18,8 @@
       <div id="connection-badge" class="badge badge-disconnected">● Desconectado</div>
     </div>
     <div class="header-center">
-      <!-- Indicador persistente de método de pago por defecto -->
       <div id="cash-indicator" class="cash-badge cash-card">💳 Tarjeta</div>
+      <div id="budget-indicator" class="budget-badge budget-none">💰 Sin tope</div>
     </div>
     <div class="header-right">
       <div id="clock"></div>
@@ -30,7 +33,7 @@
       <div class="card card-total">
         <div class="card-label">TOTAL GASTADO</div>
         <div id="total-amount" class="amount-big">0,00 €</div>
-        <div id="total-count" class="amount-sub">0 gastos registrados</div>
+        <div id="total-count"  class="amount-sub">0 gastos registrados</div>
       </div>
 
       <div class="card card-stats">
@@ -133,9 +136,46 @@
     </div>
     <div class="tinder-instructions">
       <span>← Izquierda = No deseado</span>
-      <span>↔ Repetir voz</span>
       <span>Derecha = Me gusta →</span>
       <span>↓ Atrás = Salir</span>
+    </div>
+  </section>
+
+  <!-- ── VISTA: TOPE DE GASTO ──────────────────────────────────────────────── -->
+  <section id="view-budget" class="view">
+    <div class="budget-container">
+      <div class="budget-title">💰 TOPE DE GASTO</div>
+
+      <div class="budget-amounts">
+        <div class="budget-row">
+          <span class="budget-label">Tope fijado</span>
+          <span id="budget-amount" class="budget-value">—</span>
+        </div>
+        <div class="budget-row">
+          <span class="budget-label">Gastado hasta ahora</span>
+          <span id="budget-amount-current" class="budget-value">0,00 €</span>
+        </div>
+      </div>
+
+      <div class="budget-bar-track">
+        <div id="budget-bar-fill" class="budget-bar-fill bar-ok" style="width:0%"></div>
+      </div>
+      <div id="budget-status-text" class="budget-status-text">🎤 Escuchando cantidad…</div>
+
+      <div class="budget-actions">
+        <div class="action-hint action-confirm">
+          <span>↑ Inclinar adelante</span>
+          <strong>ACEPTAR TOPE</strong>
+        </div>
+        <div class="action-hint action-repeat">
+          <span>↔ Inclinar a los lados</span>
+          <strong>EDITAR TOPE</strong>
+        </div>
+        <div class="action-hint action-cancel">
+          <span>↓ Inclinar atrás</span>
+          <strong>CANCELAR</strong>
+        </div>
+      </div>
     </div>
   </section>
 

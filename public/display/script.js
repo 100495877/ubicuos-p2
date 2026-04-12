@@ -8,11 +8,13 @@
     listening:   document.getElementById('view-listening'),
     new_expense: document.getElementById('view-new-expense'),
     tinder:      document.getElementById('view-tinder'),
+    budget:      document.getElementById('view-budget'),
   };
   const $ = id => document.getElementById(id);
   const els = {
     badge:            $('connection-badge'),
     cashIndicator:    $('cash-indicator'),
+    budgetIndicator:  $('budget-indicator'),
     clock:            $('clock'),
     totalAmount:      $('total-amount'),
     totalCount:       $('total-count'),
@@ -33,14 +35,22 @@
     likeIndicator:    $('tinder-like-indicator'),
     dislikeIndicator: $('tinder-dislike-indicator'),
     feedbackOverlay:  $('feedback-overlay'),
+    budgetAmount:     $('budget-amount'),
+    budgetCurrent:    $('budget-amount-current'),
+    budgetBar:        $('budget-bar-fill'),
+    budgetStatus:     $('budget-status-text'),
+    budgetAlertBanner:$('budget-alert-banner'),
   };
 
-  let state = { mode: 'idle', gastos: [], pendingExpense: null, tinderIndex: 0, defaultCash: false };
+  let state = {
+    mode: 'idle', gastos: [], pendingExpense: null,
+    tinderIndex: 0, defaultCash: false, budget: null,
+  };
 
   // ── Reloj ─────────────────────────────────────────────────────────────────
   function updateClock() {
     els.clock.textContent = new Date().toLocaleTimeString('es-ES', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
     });
   }
   setInterval(updateClock, 1000);
@@ -48,11 +58,19 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function showView(name) {
-    Object.entries(views).forEach(([key, el]) => el.classList.toggle('active', key === name));
+    Object.entries(views).forEach(([k, el]) => el && el.classList.toggle('active', k === name));
   }
 
   function fmt(n) {
     return (n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return `${date} ${time}`;
   }
 
   function expenseIcon(name) {
@@ -70,11 +88,24 @@
     return '💳';
   }
 
-  // ── Indicador de método de pago ───────────────────────────────────────────
   function updateCashIndicator(isCash) {
     if (!els.cashIndicator) return;
     els.cashIndicator.textContent = isCash ? '💵 Efectivo' : '💳 Tarjeta';
     els.cashIndicator.className   = 'cash-badge ' + (isCash ? 'cash-cash' : 'cash-card');
+  }
+
+  function updateBudgetIndicator(budget, gastos) {
+    if (!els.budgetIndicator) return;
+    if (!budget) {
+      els.budgetIndicator.textContent = '💰 Sin tope';
+      els.budgetIndicator.className   = 'budget-badge budget-none';
+      return;
+    }
+    const total = gastos.reduce((s, g) => s + (g.price || 0), 0);
+    const pct   = Math.min((total / budget) * 100, 100);
+    els.budgetIndicator.textContent = `💰 ${total.toFixed(0)}€ / ${budget}€`;
+    els.budgetIndicator.className   = 'budget-badge ' +
+      (pct >= 100 ? 'budget-danger' : pct >= 75 ? 'budget-warning' : 'budget-ok');
   }
 
   // ── Lista de gastos ───────────────────────────────────────────────────────
@@ -91,17 +122,17 @@
     els.expenseList.innerHTML = recent.map(g => {
       const likeClass = g.like === true ? 'liked' : g.like === false ? 'disliked' : '';
       const likeIcon  = g.like === true ? '💚' : g.like === false ? '❌' : '';
-      const meta = [
+      const metaParts = [
         g.cash ? '💵 Efectivo' : '💳 Tarjeta',
         g.location ? '📍 ' + g.location : null,
-        g.timestamp ? '🕐 ' + new Date(g.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null,
-      ].filter(Boolean).join(' · ');
+        g.timestamp ? '🗓 ' + fmtDate(g.timestamp) : null,
+      ].filter(Boolean);
       return `
         <div class="expense-item ${likeClass}">
           <span class="ei-icon">${expenseIcon(g.product)}</span>
           <div class="ei-info">
             <div class="ei-name">${g.product || 'Gasto'}</div>
-            <div class="ei-meta">${meta}</div>
+            <div class="ei-meta">${metaParts.join(' · ')}</div>
           </div>
           <div class="ei-price">${fmt(g.price)}</div>
           ${likeIcon ? `<div class="ei-like">${likeIcon}</div>` : ''}
@@ -116,20 +147,18 @@
     const cardSum  = gastos.filter(g => !g.cash).reduce((s, g) => s + (g.price || 0), 0);
     const likes    = gastos.filter(g => g.like === true).length;
     const dislikes = gastos.filter(g => g.like === false).length;
-
     els.totalAmount.textContent  = fmt(total);
     els.totalCount.textContent   = `${gastos.length} gasto${gastos.length !== 1 ? 's' : ''} registrado${gastos.length !== 1 ? 's' : ''}`;
     els.statCash.textContent     = fmt(cashSum);
     els.statCard.textContent     = fmt(cardSum);
     els.statLikes.textContent    = likes;
     els.statDislikes.textContent = dislikes;
-    els.tinderHint.style.display = gastos.length > 0 ? 'block' : 'none';
+    if (els.tinderHint) els.tinderHint.style.display = gastos.length > 0 ? 'block' : 'none';
   }
 
   // ── Vista nuevo gasto ─────────────────────────────────────────────────────
   function renderNewExpense(g) {
     if (!g) {
-      // Error de voz: mostrar estado de error limpio
       els.neProduct.textContent = '⚠️ Error de voz';
       els.nePrice.textContent   = '';
       els.neMeta.textContent    = 'Inclina a los lados para repetir · atrás para cancelar';
@@ -137,7 +166,11 @@
     }
     els.neProduct.textContent = expenseIcon(g.product) + ' ' + (g.product || 'Gasto');
     els.nePrice.textContent   = fmt(g.price);
-    els.neMeta.textContent    = g.cash ? '💵 Efectivo' : '💳 Tarjeta';
+    const metaParts = [
+      g.cash ? '💵 Efectivo' : '💳 Tarjeta',
+      g.location ? '📍 ' + g.location : null,
+    ].filter(Boolean);
+    els.neMeta.textContent = metaParts.join(' · ');
   }
 
   // ── Tarjeta Tinder ────────────────────────────────────────────────────────
@@ -146,11 +179,49 @@
     if (!g) { showView('idle'); return; }
     els.tcProduct.textContent      = expenseIcon(g.product) + ' ' + (g.product || 'Gasto');
     els.tcPrice.textContent        = fmt(g.price);
-    els.tcMeta.textContent         = g.cash ? '💵 Efectivo' : '💳 Tarjeta';
+    const metaParts = [
+      g.cash ? '💵 Efectivo' : '💳 Tarjeta',
+      g.location ? '📍 ' + g.location : null,
+      g.timestamp ? '🗓 ' + fmtDate(g.timestamp) : null,
+    ].filter(Boolean);
+    els.tcMeta.textContent         = metaParts.join(' · ');
     els.tinderProgress.textContent = `${index + 1} / ${gastos.length}`;
     els.tinderCard.classList.remove('anim-like', 'anim-dislike');
     els.likeIndicator.classList.remove('show');
     els.dislikeIndicator.classList.remove('show');
+  }
+
+  // ── Vista budget ──────────────────────────────────────────────────────────
+  function renderBudget(budget, gastos) {
+    const total = gastos.reduce((s, g) => s + (g.price || 0), 0);
+    if (budget) {
+      const pct = Math.min((total / budget) * 100, 100);
+      els.budgetAmount.textContent  = fmt(budget);
+      els.budgetCurrent.textContent = fmt(total);
+      els.budgetBar.style.width     = pct + '%';
+      els.budgetBar.className       = 'budget-bar-fill ' +
+        (pct >= 100 ? 'bar-danger' : pct >= 75 ? 'bar-warning' : 'bar-ok');
+      els.budgetStatus.textContent  =
+        pct >= 100 ? '🚨 ¡Tope superado!'
+        : pct >= 75 ? '⚠️ Cerca del límite'
+        : pct >= 50 ? '💡 Mitad del tope'
+        : '✅ Dentro del presupuesto';
+    } else {
+      els.budgetAmount.textContent  = '—';
+      els.budgetCurrent.textContent = fmt(total);
+      els.budgetBar.style.width     = '0%';
+      els.budgetStatus.textContent  = '🎤 Escuchando cantidad…';
+    }
+  }
+
+  // ── Alerta de tope ────────────────────────────────────────────────────────
+  function showBudgetAlert(data) {
+    if (!els.budgetAlertBanner) return;
+    const colors = { danger: '#ef4444', warning: '#f59e0b', info: '#3b82f6' };
+    els.budgetAlertBanner.textContent   = `${data.label} (${data.total.toFixed(2)}€ / ${data.budget}€)`;
+    els.budgetAlertBanner.style.background = colors[data.level] || '#3b82f6';
+    els.budgetAlertBanner.classList.add('show');
+    setTimeout(() => els.budgetAlertBanner.classList.remove('show'), 5000);
   }
 
   // ── Feedback flash ────────────────────────────────────────────────────────
@@ -167,6 +238,7 @@
     state = newState;
     renderStats(state.gastos || []);
     updateCashIndicator(state.defaultCash);
+    updateBudgetIndicator(state.budget, state.gastos || []);
 
     switch (state.mode) {
       case 'idle':
@@ -184,6 +256,10 @@
         renderTinderCard(state.gastos || [], state.tinderIndex || 0);
         showView('tinder');
         break;
+      case 'budget':
+        renderBudget(state.budget, state.gastos || []);
+        showView('budget');
+        break;
     }
   }
 
@@ -192,13 +268,10 @@
   socket.on('disconnect', () => { els.badge.className = 'badge badge-disconnected'; els.badge.textContent = '● Desconectado'; });
   socket.on('state_update', applyState);
 
-  socket.on('confirm',  () => showFeedback('✅'));
-  socket.on('cancel',   () => showFeedback('❌'));
-  socket.on('toggle_cash', () => {
-    updateCashIndicator(state.defaultCash);
-    showFeedback('💳');
-  });
-  socket.on('mark_like', () => {
+  socket.on('confirm',      () => showFeedback('✅'));
+  socket.on('cancel',       () => showFeedback('❌'));
+  socket.on('toggle_cash',  () => { updateCashIndicator(state.defaultCash); showFeedback('💳'); });
+  socket.on('mark_like',    () => {
     els.likeIndicator.classList.add('show');
     els.tinderCard.classList.add('anim-like');
     showFeedback('💚');
@@ -210,10 +283,12 @@
     showFeedback('❌');
     setTimeout(() => els.dislikeIndicator.classList.remove('show'), 600);
   });
+  socket.on('budget_alert', showBudgetAlert);
 
   // ── Init ──────────────────────────────────────────────────────────────────
   showView('idle');
   renderStats([]);
   renderExpenseList([]);
   updateCashIndicator(false);
+  updateBudgetIndicator(null, []);
 })();
