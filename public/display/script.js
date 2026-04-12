@@ -82,7 +82,7 @@
     if (/gasolin|carburante|parking|aparcamiento/.test(n)) return '⛽';
     if (/farmaci|medicina|médico|doctor/.test(n))          return '💊';
     if (/restaur|comid|pizza|kebab|sushi/.test(n))         return '🍽️';
-    if (/ropa|zapatos|camisa|pantalon/.test(n))            return '👗';
+    if (/ropa|zapatos|sudadera|jersey|camis|pantalon/.test(n))            return '👗';
     if (/cine|teatro|música|concert|entrada/.test(n))      return '🎭';
     if (/transporte|tren|metro|autobús|taxi|uber/.test(n)) return '🚌';
     if (/libro|librería/.test(n))                          return '📚';
