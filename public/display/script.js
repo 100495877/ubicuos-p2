@@ -82,7 +82,7 @@
     if (/gasolin|carburante|parking|aparcamiento/.test(n)) return '⛽';
     if (/farmaci|medicina|médico|doctor/.test(n))          return '💊';
     if (/restaur|comid|pizza|kebab|sushi/.test(n))         return '🍽️';
-    if (/ropa|zapatos|sudadera|jersey|camis|pantalon/.test(n))            return '👗';
+    if (/ropa|zapatos|camisa|pantalon/.test(n))            return '👗';
     if (/cine|teatro|música|concert|entrada/.test(n))      return '🎭';
     if (/transporte|tren|metro|autobús|taxi|uber/.test(n)) return '🚌';
     if (/libro|librería/.test(n))                          return '📚';
@@ -294,9 +294,8 @@
     if (!el) return;
     el.innerHTML = `<strong>⚠️ ¡Atención!</strong> ${data.message}<br><small>${data.product} · ${(data.price||0).toFixed(2)}€</small>`;
     el.classList.add('show');
+    // Quitar el banner a los 6 s (sin showFeedback: el overlay taparía el banner)
     setTimeout(() => el.classList.remove('show'), 6000);
-    // Feedback visual fuerte
-    showFeedback('⚠️');
   }
 
   socket.on('budget_alert',   showBudgetAlert);

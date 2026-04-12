@@ -724,7 +724,9 @@ body::before {
 .category-alert-banner {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 300;
+  /* Por encima del body::before (1000), del feedback overlay (500)
+     y del budget banner (1000) */
+  z-index: 1100;
   padding: 0;
   background: linear-gradient(135deg, #b45309, #92400e);
   color: #fef3c7;
@@ -734,9 +736,8 @@ body::before {
   text-align: center;
   max-height: 0;
   overflow: hidden;
-  /* border-bottom solo cuando visible, evita línea naranja permanente */
-  border-bottom: 0 solid transparent;
-  transition: max-height 0.4s ease, padding 0.4s ease, border-bottom 0.1s ease;
+  /* Sin borde en estado oculto — evita línea naranja permanente */
+  transition: max-height 0.4s ease, padding 0.4s ease;
 }
 .category-alert-banner small {
   font-size: 12px;

@@ -155,17 +155,22 @@ io.on('connection', (socket) => {
         const category = getCategory(g.product);
         g.category     = category;
 
-        // ¿Esta categoría tiene reputación negativa?
+        state.gastos.push(g);
+
+        // Alerta de categoría: emitir con delay para que el display
+        // haya procesado primero el state_update y vuelto a idle
         if (state.categoryReputation[category] === 'disliked') {
-          console.log(`[${id}] ALERTA categoría: "${category}" tiene reputación negativa`);
-          broadcast('category_alert', {
+          const alertData = {
             category,
             product: g.product,
             price:   g.price,
             message: `⚠️ Ya dijiste que no querías gastar en "${category}"`,
-          });
+          };
+          setTimeout(() => {
+            console.log(`[Server] ALERTA categoría: "${category}" tiene reputación negativa`);
+            broadcast('category_alert', alertData);
+          }, 400);
         }
-        state.gastos.push(g);
       }
       state.pendingExpense = null;
       state.mode           = 'idle';
