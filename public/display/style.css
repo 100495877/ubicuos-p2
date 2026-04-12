@@ -725,7 +725,7 @@ body::before {
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 300;
-  padding: 0 20px;
+  padding: 0;
   background: linear-gradient(135deg, #b45309, #92400e);
   color: #fef3c7;
   font-size: 15px;
@@ -734,8 +734,9 @@ body::before {
   text-align: center;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.4s ease, padding 0.4s ease;
-  border-bottom: 2px solid #f59e0b;
+  /* border-bottom solo cuando visible, evita línea naranja permanente */
+  border-bottom: 0 solid transparent;
+  transition: max-height 0.4s ease, padding 0.4s ease, border-bottom 0.1s ease;
 }
 .category-alert-banner small {
   font-size: 12px;
@@ -745,9 +746,5 @@ body::before {
 .category-alert-banner.show {
   max-height: 80px;
   padding: 12px 20px;
-}
-/* Cuando hay alerta de categoría Y de tope activas a la vez, apilar */
-.budget-alert-banner.show ~ .category-alert-banner.show,
-.category-alert-banner.show {
-  top: 0;
+  border-bottom: 2px solid #f59e0b;
 }

@@ -47,9 +47,22 @@ let calibSamples  = [];
 
 export function setCurrentMode(mode) { currentMode = mode; }
 
+// Flag para suprimir setStatus durante la cuenta atrás de calibración
+let _calibrating = false;
+
 export function recalibrate() {
-  calibrated = false; calibSamples = [];
-  setStatus('🔄 Recalibrando… mantén el móvil en posición normal');
+  // Resetear estado de calibración
+  calibrated    = false;
+  calibSamples  = [];
+  _calibrating  = true;
+
+  // Resetear todos los flags de tilt para evitar gestos "pegados"
+  tiltForwardActive = false;
+  tiltBackActive    = false;
+  tiltLeftActive    = false;
+  tiltRightActive   = false;
+
+  setStatus('🔄 Recalibrando… mantén el móvil quieto en posición normal');
   console.log('[Motion] Recalibración iniciada');
 }
 
@@ -105,14 +118,27 @@ function _initTilt(socket) {
       // Fase de calibración
       if (!calibrated) {
         calibSamples.push({ beta: rawBeta, gamma: rawGamma });
+
+        // Mostrar cuenta atrás solo cada 10 muestras para no saturar
         if (calibSamples.length % 10 === 0) {
           const rem = Math.ceil((CALIBRATION_SAMPLES - calibSamples.length) / 10);
-          setStatus(`🔄 Calibrando… (${rem}s)`);
+          if (rem > 0) setStatus(`🔄 Calibrando… (${rem}s)`);
         }
+
         if (calibSamples.length >= CALIBRATION_SAMPLES) {
           betaOffset  = calibSamples.reduce((s, v) => s + v.beta,  0) / calibSamples.length;
           gammaOffset = calibSamples.reduce((s, v) => s + v.gamma, 0) / calibSamples.length;
-          calibrated  = true; calibSamples = [];
+          calibrated   = true;
+          _calibrating = false;
+          calibSamples = [];
+
+          // Resetear también los flags aquí por si el móvil estaba inclinado
+          // durante la calibración (los offsets absorben esa inclinación)
+          tiltForwardActive = false;
+          tiltBackActive    = false;
+          tiltLeftActive    = false;
+          tiltRightActive   = false;
+
           console.log(`[Motion] Calibrado β=${betaOffset.toFixed(1)}° γ=${gammaOffset.toFixed(1)}°`);
           vibrateSuccess();
           setStatus('✅ Listo — sacude para registrar un gasto');
