@@ -39,12 +39,14 @@
     budgetCurrent:    $('budget-amount-current'),
     budgetBar:        $('budget-bar-fill'),
     budgetStatus:     $('budget-status-text'),
-    budgetAlertBanner:$('budget-alert-banner'),
+    budgetAlertBanner:   $('budget-alert-banner'),
+    categoryAlertBanner: $('category-alert-banner'),
   };
 
   let state = {
     mode: 'idle', gastos: [], pendingExpense: null,
     tinderIndex: 0, defaultCash: false, budget: null,
+    categoryReputation: {},
   };
 
   // ── Reloj ─────────────────────────────────────────────────────────────────
@@ -179,12 +181,15 @@
     if (!g) { showView('idle'); return; }
     els.tcProduct.textContent      = expenseIcon(g.product) + ' ' + (g.product || 'Gasto');
     els.tcPrice.textContent        = fmt(g.price);
+    const category = g.category || '';
+    const rep      = state.categoryReputation[category];
+    const repBadge = rep === 'disliked' ? ' · ⚠️ categoría marcada' : rep === 'liked' ? ' · ✅ categoría ok' : '';
     const metaParts = [
       g.cash ? '💵 Efectivo' : '💳 Tarjeta',
       g.location ? '📍 ' + g.location : null,
       g.timestamp ? '⏰ ' + fmtDate(g.timestamp) : null,
     ].filter(Boolean);
-    els.tcMeta.textContent         = metaParts.join(' · ');
+    els.tcMeta.textContent         = metaParts.join(' · ') + repBadge;
     els.tinderProgress.textContent = `${index + 1} / ${gastos.length}`;
     els.tinderCard.classList.remove('anim-like', 'anim-dislike');
     els.likeIndicator.classList.remove('show');
@@ -283,7 +288,19 @@
     showFeedback('❌');
     setTimeout(() => els.dislikeIndicator.classList.remove('show'), 600);
   });
-  socket.on('budget_alert', showBudgetAlert);
+  // ── Alerta de categoría con reputación negativa ──────────────────────────
+  function showCategoryAlert(data) {
+    const el = els.categoryAlertBanner;
+    if (!el) return;
+    el.innerHTML = `<strong>⚠️ ¡Atención!</strong> ${data.message}<br><small>${data.product} · ${(data.price||0).toFixed(2)}€</small>`;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 6000);
+    // Feedback visual fuerte
+    showFeedback('⚠️');
+  }
+
+  socket.on('budget_alert',   showBudgetAlert);
+  socket.on('category_alert', showCategoryAlert);
 
   // ── Init ──────────────────────────────────────────────────────────────────
   showView('idle');
