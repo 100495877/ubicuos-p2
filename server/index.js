@@ -12,17 +12,35 @@ const io     = new Server(server, { cors: { origin: '*' } });
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 let state = {
-  mode:           'idle',   // 'idle'|'listening'|'new_expense'|'tinder'|'budget'
-  gastos:         [],
-  pendingExpense: null,
-  tinderIndex:    0,
-  defaultCash:    false,
-  budget:         null,     // null = sin tope, número = límite en €
-  budgetAlerts:   [],       // umbrales ya notificados: [50, 75, 100]
+  mode:               'idle',   // 'idle'|'listening'|'new_expense'|'tinder'|'budget'
+  gastos:             [],
+  pendingExpense:     null,
+  tinderIndex:        0,
+  defaultCash:        false,
+  budget:             null,     // null = sin tope, número = límite en €
+  budgetAlerts:       [],       // umbrales ya notificados: [50, 75, 100]
+  categoryReputation: {},       // { [category]: 'liked'|'disliked' }
 };
 
 function broadcast(event, data) { io.emit(event, data); }
 function pushState()             { broadcast(EVENTS.STATE_UPDATE, state); }
+
+// ─── DETECCIÓN DE CATEGORÍA ──────────────────────────────────────────────────
+// Devuelve la categoría canónica del nombre de un producto, o 'otros'.
+function getCategory(productName) {
+  const n = (productName || '').toLowerCase();
+  if (/café|coffee|bar|cerveza|vino|bebida|copa|trago/.test(n))           return 'bebidas';
+  if (/super|mercado|compr|aliment|fruta|carne|verdura/.test(n))          return 'alimentación';
+  if (/gasolin|carburante|parking|aparcamiento|gasolinera/.test(n))       return 'transporte';
+  if (/farmaci|medicina|médico|doctor|pastilla/.test(n))                  return 'salud';
+  if (/restaur|comida|pizza|kebab|sushi|hamburgues|cena|almuerzo/.test(n)) return 'restaurantes';
+  if (/ropa|zapatos|camisa|pantalon|vestido|abrigo|camiseta/.test(n))     return 'ropa';
+  if (/cine|teatro|música|concert|entrada|ocio/.test(n))                  return 'ocio';
+  if (/tren|metro|autobús|taxi|uber|transporte|bus/.test(n))              return 'transporte';
+  if (/libro|librería|curso|clase/.test(n))                               return 'educación';
+  if (/gym|gimnasio|deporte|entrenamiento/.test(n))                       return 'deporte';
+  return 'otros';
+}
 
 // ─── COMPROBACIÓN DE TOPE ─────────────────────────────────────────────────────
 function checkBudgetAlerts() {
@@ -132,7 +150,23 @@ io.on('connection', (socket) => {
   socket.on(EVENTS.CONFIRM, () => {
     if (state.mode === 'new_expense') {
       console.log(`[${id}] CONFIRM → guardar gasto`);
-      if (state.pendingExpense) state.gastos.push(state.pendingExpense);
+      if (state.pendingExpense) {
+        const g        = state.pendingExpense;
+        const category = getCategory(g.product);
+        g.category     = category;
+
+        // ¿Esta categoría tiene reputación negativa?
+        if (state.categoryReputation[category] === 'disliked') {
+          console.log(`[${id}] ALERTA categoría: "${category}" tiene reputación negativa`);
+          broadcast('category_alert', {
+            category,
+            product: g.product,
+            price:   g.price,
+            message: `⚠️ Ya dijiste que no querías gastar en "${category}"`,
+          });
+        }
+        state.gastos.push(g);
+      }
       state.pendingExpense = null;
       state.mode           = 'idle';
       pushState();
@@ -148,8 +182,9 @@ io.on('connection', (socket) => {
   });
 
   // ── 8. CANCEL ─────────────────────────────────────────────────────────────
+  // El modo 'budget' NO tiene cancel: el usuario solo puede confirmar o editar.
   socket.on(EVENTS.CANCEL, () => {
-    if (state.mode === 'idle') return;
+    if (state.mode === 'idle' || state.mode === 'budget') return;
     console.log(`[${id}] CANCEL (modo: ${state.mode})`);
     state.pendingExpense = null;
     state.mode           = 'idle';
@@ -183,7 +218,14 @@ io.on('connection', (socket) => {
   socket.on(EVENTS.MARK_LIKE, () => {
     if (state.mode !== 'tinder') return;
     const g = state.gastos[state.tinderIndex];
-    if (g) g.like = true;
+    if (g) {
+      g.like = true;
+      const cat = g.category || getCategory(g.product);
+      g.category = cat;
+      // Actualizar reputación: liked prevalece si antes era disliked
+      state.categoryReputation[cat] = 'liked';
+      console.log(`[${id}] LIKE → categoría "${cat}" → liked`);
+    }
     pushState();
     broadcast(EVENTS.MARK_LIKE, { index: state.tinderIndex });
     setTimeout(() => _advanceTinder(), 600);
@@ -192,7 +234,16 @@ io.on('connection', (socket) => {
   socket.on(EVENTS.MARK_DISLIKE, () => {
     if (state.mode !== 'tinder') return;
     const g = state.gastos[state.tinderIndex];
-    if (g) g.like = false;
+    if (g) {
+      g.like = false;
+      const cat = g.category || getCategory(g.product);
+      g.category = cat;
+      // Guardar reputación negativa solo si no había liked previo en esta categoría
+      if (state.categoryReputation[cat] !== 'liked') {
+        state.categoryReputation[cat] = 'disliked';
+        console.log(`[${id}] DISLIKE → categoría "${cat}" → disliked`);
+      }
+    }
     pushState();
     broadcast(EVENTS.MARK_DISLIKE, { index: state.tinderIndex });
     setTimeout(() => _advanceTinder(), 600);

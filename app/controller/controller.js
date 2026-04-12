@@ -26,7 +26,7 @@ window.addEventListener('load', () => {
 
     // Si entramos en budget con tope existente, indicar opciones al usuario
     if (state.mode === 'budget' && state.budget) {
-      setStatus(`💰 Tope actual: ${state.budget}€\n↑ Adelante: aceptar  ↔ Lados: editar  ↓ Atrás: cancelar`);
+      setStatus(`💰 Tope actual: ${state.budget}€\n↑ Adelante: aceptar  ↔ Lados: editar`);
     }
   });
 

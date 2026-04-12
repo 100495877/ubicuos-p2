@@ -197,18 +197,13 @@ function _initTilt(socket) {
       }
 
       // ── BUDGET ────────────────────────────────────────────────────────────
+      // No hay CANCEL en budget: solo confirmar o editar.
       if (currentMode === 'budget') {
         if (inForward && !tiltForwardActive) {
           tiltForwardActive = true; lastTiltTime = now;
           console.log(`[Motion] BUDGET FWD → CONFIRM (aceptar tope)`);
           vibrateSuccess(); setStatus('✅ Tope aceptado');
           socket.emit(EVENTS.CONFIRM); return;
-        }
-        if (inBack && !tiltBackActive) {
-          tiltBackActive = true; lastTiltTime = now;
-          console.log(`[Motion] BUDGET BACK → CANCEL`);
-          vibrateLong(); setStatus('❌ Cancelado');
-          socket.emit(EVENTS.CANCEL); return;
         }
         if ((inRight && !tiltRightActive) || (inLeft && !tiltLeftActive)) {
           if (inRight) tiltRightActive = true;
