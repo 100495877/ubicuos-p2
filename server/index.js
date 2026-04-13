@@ -49,9 +49,9 @@ function checkBudgetAlerts() {
   const pct   = (total / state.budget) * 100;
 
   const thresholds = [
-    { pct: 100, label: '🚨 Has superado el tope de gasto', level: 'danger' },
-    { pct: 75,  label: '⚠️ Llevas el 75% del tope de gasto', level: 'warning' },
-    { pct: 50,  label: '💡 Llevas el 50% del tope de gasto', level: 'info' },
+    { pct: 100, label: 'Has superado el tope de gasto', level: 'danger' },
+    { pct: 75,  label: 'Llevas el 75% del tope de gasto', level: 'warning' },
+    { pct: 50,  label: 'Llevas el 50% del tope de gasto', level: 'info' },
   ];
 
   for (const t of thresholds) {
@@ -164,7 +164,7 @@ io.on('connection', (socket) => {
             category,
             product: g.product,
             price:   g.price,
-            message: `⚠️ Ya dijiste que no querías gastar en "${category}"`,
+            message: `Ya dijiste que no querías gastar en "${category}"`,
           };
           setTimeout(() => {
             console.log(`[Server] ALERTA categoría: "${category}" tiene reputación negativa`);

@@ -62,7 +62,7 @@ export function recalibrate() {
   tiltLeftActive    = false;
   tiltRightActive   = false;
 
-  setStatus('🔄 Recalibrando… mantén el móvil quieto en posición normal');
+  setStatus('Recalibrando sensores\nMantén el móvil quieto en posición normal');
   console.log('[Motion] Recalibración iniciada');
 }
 
@@ -80,7 +80,7 @@ function _initShake(socket) {
     if (mag > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN_MS) {
       if (currentMode === 'idle' || currentMode === 'tinder') {
         console.log('[Motion] SHAKE', mag.toFixed(1));
-        vibrateShort(); setStatus('📳 Shake detectado');
+        vibrateShort(); setStatus('Movimiento detectado');
         socket.emit(EVENTS.GESTO_SHAKE);
         lastShakeTime = now;
       }
@@ -122,7 +122,7 @@ function _initTilt(socket) {
         // Mostrar cuenta atrás solo cada 10 muestras para no saturar
         if (calibSamples.length % 10 === 0) {
           const rem = Math.ceil((CALIBRATION_SAMPLES - calibSamples.length) / 10);
-          if (rem > 0) setStatus(`🔄 Calibrando… (${rem}s)`);
+          if (rem > 0) setStatus(`Calibrando sensores (${rem}s)`);
         }
 
         if (calibSamples.length >= CALIBRATION_SAMPLES) {
@@ -141,7 +141,7 @@ function _initTilt(socket) {
 
           console.log(`[Motion] Calibrado β=${betaOffset.toFixed(1)}° γ=${gammaOffset.toFixed(1)}°`);
           vibrateSuccess();
-          setStatus('✅ Listo — sacude para registrar un gasto');
+          setStatus('Sistema listo\nSacude para registrar un gasto');
         }
         return;
       }
@@ -169,13 +169,13 @@ function _initTilt(socket) {
         if (inForward && !tiltForwardActive) {
           tiltForwardActive = true; lastTiltTime = now;
           console.log(`[Motion] IDLE FWD → ENTER_TINDER`);
-          vibrateSuccess(); setStatus('🃏 Entrando en Tinder…');
+          vibrateSuccess(); setStatus('Entrando en revisión');
           socket.emit(EVENTS.ENTER_TINDER); return;
         }
         if (inBack && !tiltBackActive) {
           tiltBackActive = true; lastTiltTime = now;
           console.log(`[Motion] IDLE BACK → ENTER_BUDGET`);
-          vibrateShort(); setStatus('💰 Modo tope de gasto…');
+          vibrateShort(); setStatus('Acceso a tope de gasto');
           socket.emit(EVENTS.ENTER_BUDGET); return;
         }
         if ((inRight && !tiltRightActive) || (inLeft && !tiltLeftActive)) {
@@ -183,7 +183,7 @@ function _initTilt(socket) {
           if (inLeft)  tiltLeftActive  = true;
           lastTiltTime = now;
           console.log(`[Motion] IDLE SIDE → TOGGLE_CASH`);
-          vibrateShort(); setStatus('💳 Cambiar método de pago');
+          vibrateShort(); setStatus('Cambio de método de pago');
           socket.emit(EVENTS.TOGGLE_CASH); return;
         }
         return;
@@ -194,7 +194,7 @@ function _initTilt(socket) {
         if (inBack && !tiltBackActive) {
           tiltBackActive = true; lastTiltTime = now;
           console.log(`[Motion] LISTENING BACK → CANCEL`);
-          vibrateLong(); setStatus('❌ Grabación cancelada');
+          vibrateLong(); setStatus('Grabación cancelada');
           socket.emit(EVENTS.CANCEL);
         }
         return;
@@ -204,19 +204,19 @@ function _initTilt(socket) {
       if (currentMode === 'new_expense') {
         if (inForward && !tiltForwardActive) {
           tiltForwardActive = true; lastTiltTime = now;
-          vibrateSuccess(); setStatus('✅ Confirmando…');
+          vibrateSuccess(); setStatus('Confirmando gasto');
           socket.emit(EVENTS.CONFIRM); return;
         }
         if (inBack && !tiltBackActive) {
           tiltBackActive = true; lastTiltTime = now;
-          vibrateLong(); setStatus('❌ Gasto cancelado');
+          vibrateLong(); setStatus('Gasto cancelado');
           socket.emit(EVENTS.CANCEL); return;
         }
         if ((inRight && !tiltRightActive) || (inLeft && !tiltLeftActive)) {
           if (inRight) tiltRightActive = true;
           if (inLeft)  tiltLeftActive  = true;
           lastTiltTime = now;
-          vibrateDouble(); setStatus('🔄 Repitiendo grabación…');
+          vibrateDouble(); setStatus('Repitiendo grabación');
           socket.emit(EVENTS.REPEAT_CAPTURE); return;
         }
         return;
@@ -228,7 +228,7 @@ function _initTilt(socket) {
         if (inForward && !tiltForwardActive) {
           tiltForwardActive = true; lastTiltTime = now;
           console.log(`[Motion] BUDGET FWD → CONFIRM (aceptar tope)`);
-          vibrateSuccess(); setStatus('✅ Tope aceptado');
+          vibrateSuccess(); setStatus('Tope aceptado');
           socket.emit(EVENTS.CONFIRM); return;
         }
         if ((inRight && !tiltRightActive) || (inLeft && !tiltLeftActive)) {
@@ -236,7 +236,7 @@ function _initTilt(socket) {
           if (inLeft)  tiltLeftActive  = true;
           lastTiltTime = now;
           console.log(`[Motion] BUDGET SIDE → EDIT_BUDGET`);
-          vibrateDouble(); setStatus('✏️ Editando tope…');
+          vibrateDouble(); setStatus('Editando tope');
           socket.emit(EVENTS.EDIT_BUDGET); return;
         }
         return;
@@ -246,17 +246,17 @@ function _initTilt(socket) {
       if (currentMode === 'tinder') {
         if (inRight && !tiltRightActive) {
           tiltRightActive = true; lastTiltTime = now;
-          vibrateDouble(); setStatus('💚 Me gusta');
+          vibrateDouble(); setStatus('Gasto aprobado');
           socket.emit(EVENTS.MARK_LIKE); return;
         }
         if (inLeft && !tiltLeftActive) {
           tiltLeftActive = true; lastTiltTime = now;
-          vibrateLong(); setStatus('❤️‍🔥 No me gusta');
+          vibrateLong(); setStatus('Gasto no deseado');
           socket.emit(EVENTS.MARK_DISLIKE); return;
         }
         if (inBack && !tiltBackActive) {
           tiltBackActive = true; lastTiltTime = now;
-          vibrateLong(); setStatus('🚪 Saliendo de Tinder');
+          vibrateLong(); setStatus('Saliendo de revisión');
           socket.emit(EVENTS.CANCEL); return;
         }
         return;

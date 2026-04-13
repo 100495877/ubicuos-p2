@@ -21,6 +21,6 @@ export function setMode(msg) {
 export function setCash(isCash) {
   const el = document.getElementById('cash-indicator');
   if (!el) return;
-  el.textContent  = isCash ? '💵 Efectivo' : '💳 Tarjeta';
+  el.textContent  = isCash ? 'Efectivo' : 'Tarjeta';
   el.className    = 'cash-badge ' + (isCash ? 'cash-cash' : 'cash-card');
 }

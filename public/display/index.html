@@ -17,12 +17,12 @@
   <!-- ── CABECERA ─────────────────────────────────────────────────────────── -->
   <header id="header">
     <div class="header-left">
-      <div class="logo">💳 CARTERA</div>
+      <div class="logo">CARTERA</div>
       <div id="connection-badge" class="badge badge-disconnected">● Desconectado</div>
     </div>
     <div class="header-center">
-      <div id="cash-indicator" class="cash-badge cash-card">💳 Tarjeta</div>
-      <div id="budget-indicator" class="budget-badge budget-none">💰 Sin tope</div>
+      <div id="cash-indicator" class="cash-badge cash-card">Tarjeta</div>
+      <div id="budget-indicator" class="budget-badge budget-none">Sin tope</div>
     </div>
     <div class="header-right">
       <div id="clock"></div>
@@ -34,31 +34,48 @@
     <div class="dashboard-grid">
 
       <div class="card card-total">
-        <div class="card-label">TOTAL GASTADO</div>
-        <div id="total-amount" class="amount-big">0,00 €</div>
-        <div id="total-count"  class="amount-sub">0 gastos registrados</div>
+        <div class="hero-copy">
+          <div class="card-label">TOTAL GASTADO</div>
+          <div id="total-amount" class="amount-big">0,00 €</div>
+          <div id="total-count"  class="amount-sub">0 gastos registrados</div>
+          <div class="hero-note">Controla tus gastos cotidianos con una vista clara y feedback inmediato.</div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="wallet-card-art">
+            <div class="wallet-card-chip"></div>
+            <div class="wallet-card-line wallet-card-line-top"></div>
+            <div class="wallet-card-line wallet-card-line-bottom"></div>
+            <div class="wallet-card-brand">SMART WALLET</div>
+          </div>
+          <div class="wallet-chart-art">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
       </div>
 
       <div class="card card-stats">
         <div class="card-label">RESUMEN</div>
         <div class="stats-row">
           <div class="stat-item">
-            <span class="stat-icon">💳</span>
+            <span class="stat-icon">CR</span>
             <span id="stat-card">0,00 €</span>
             <span class="stat-label">Tarjeta</span>
           </div>
           <div class="stat-item">
-            <span class="stat-icon">💵</span>
+            <span class="stat-icon">EF</span>
             <span id="stat-cash">0,00 €</span>
             <span class="stat-label">Efectivo</span>
           </div>
           <div class="stat-item">
-            <span class="stat-icon">💚</span>
+            <span class="stat-icon">OK</span>
             <span id="stat-likes">0</span>
             <span class="stat-label">Me gusta</span>
           </div>
           <div class="stat-item">
-            <span class="stat-icon">❌</span>
+            <span class="stat-icon">NO</span>
             <span id="stat-dislikes">0</span>
             <span class="stat-label">No deseados</span>
           </div>
@@ -66,11 +83,15 @@
       </div>
 
       <div class="card card-list">
-        <div class="card-label">ÚLTIMOS GASTOS</div>
+        <div class="card-list-header">
+          <div class="card-label">ÚLTIMOS GASTOS</div>
+          <div class="section-chip">Actividad reciente</div>
+        </div>
         <div id="expense-list" class="expense-list">
           <div class="empty-state">
-            <div class="empty-icon">📳</div>
-            <div>Sacude el móvil para registrar tu primer gasto</div>
+            <div class="empty-icon">AC</div>
+            <div class="empty-title">Aún no hay movimientos</div>
+            <div class="empty-text">Sacude el móvil para registrar tu primer gasto y ver aquí tu actividad.</div>
           </div>
         </div>
       </div>
@@ -91,7 +112,7 @@
       <div class="mic-ring ring-1"></div>
       <div class="mic-ring ring-2"></div>
       <div class="mic-ring ring-3"></div>
-      <div class="mic-icon">🎤</div>
+      <div class="mic-icon">MIC</div>
       <div class="listening-title">ESCUCHANDO…</div>
       <div class="listening-hint">Di: <em>"café 2,50"</em> o <em>"supermercado 34"</em></div>
       <div class="listening-cancel-hint">↓ Inclina atrás para cancelar</div>
@@ -129,8 +150,8 @@
       <div id="tinder-progress" class="tinder-progress">1 / 1</div>
     </div>
     <div class="tinder-arena">
-      <div id="tinder-like-indicator"    class="swipe-indicator si-like">💚 ME GUSTA</div>
-      <div id="tinder-dislike-indicator" class="swipe-indicator si-dislike">❌ NO DESEADO</div>
+      <div id="tinder-like-indicator"    class="swipe-indicator si-like">APROBADO</div>
+      <div id="tinder-dislike-indicator" class="swipe-indicator si-dislike">NO DESEADO</div>
       <div id="tinder-card" class="tinder-card">
         <div id="tc-product" class="tc-product">—</div>
         <div id="tc-price"   class="tc-price">0,00 €</div>
@@ -147,7 +168,7 @@
   <!-- ── VISTA: TOPE DE GASTO ──────────────────────────────────────────────── -->
   <section id="view-budget" class="view">
     <div class="budget-container">
-      <div class="budget-title">💰 TOPE DE GASTO</div>
+      <div class="budget-title">TOPE DE GASTO</div>
 
       <div class="budget-amounts">
         <div class="budget-row">
@@ -163,7 +184,7 @@
       <div class="budget-bar-track">
         <div id="budget-bar-fill" class="budget-bar-fill bar-ok" style="width:0%"></div>
       </div>
-      <div id="budget-status-text" class="budget-status-text">🎤 Escuchando cantidad…</div>
+      <div id="budget-status-text" class="budget-status-text">Escuchando cantidad…</div>
 
       <div class="budget-actions">
         <div class="action-hint action-confirm">

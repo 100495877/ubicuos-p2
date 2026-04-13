@@ -8,36 +8,37 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f3eee6;
-      --bg-deep: #e8dece;
-      --surface: rgba(255, 251, 246, 0.82);
-      --surface-strong: rgba(255, 253, 249, 0.96);
-      --ink: #1f2927;
-      --ink-soft: #5b645f;
-      --ink-faint: #848c86;
-      --line: rgba(49, 63, 58, 0.1);
-      --accent: #187a63;
-      --accent-strong: #0f5f4c;
-      --accent-soft: rgba(24, 122, 99, 0.1);
-      --gold: #b98534;
-      --gold-soft: rgba(185, 133, 52, 0.12);
-      --shadow: 0 18px 40px rgba(80, 66, 46, 0.12);
-      --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
-      --font-display: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+      --bg: #f4f6fa;
+      --bg-soft: #edf2f7;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --surface-muted: #f0f4f8;
+      --text: #172333;
+      --text-soft: #5d6d81;
+      --text-faint: #8a97aa;
+      --line: #dfe6ef;
+      --accent: #8d2940;
+      --accent-soft: rgba(141, 41, 64, 0.08);
+      --blue: #456aa6;
+      --blue-soft: rgba(69, 106, 166, 0.08);
+      --green: #118a63;
+      --green-soft: rgba(17, 138, 99, 0.08);
+      --amber: #b56b2f;
+      --amber-soft: rgba(181, 107, 47, 0.1);
+      --shadow: 0 18px 42px rgba(22, 35, 51, 0.08);
+      --shadow-soft: 0 8px 22px rgba(22, 35, 51, 0.06);
+      --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     }
 
     body {
       font-family: var(--font-sans);
       background:
-        radial-gradient(circle at top right, rgba(24, 122, 99, 0.12), transparent 28%),
-        radial-gradient(circle at bottom left, rgba(185, 133, 52, 0.12), transparent 34%),
-        linear-gradient(180deg, #f8f4ed 0%, var(--bg) 58%, var(--bg-deep) 100%);
-      color: var(--ink);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+        radial-gradient(circle at top left, rgba(141, 41, 64, 0.08), transparent 24%),
+        radial-gradient(circle at top right, rgba(181, 107, 47, 0.06), transparent 20%),
+        linear-gradient(180deg, #fbfcfe 0%, var(--bg) 48%, var(--bg-soft) 100%);
+      color: var(--text);
       min-height: 100dvh;
-      padding: 28px 18px 30px;
+      padding: 16px 14px 24px;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -48,159 +49,271 @@
       inset: 0;
       pointer-events: none;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.28), transparent 24%),
+        linear-gradient(180deg, rgba(255,255,255,0.72), transparent 16%),
         repeating-linear-gradient(
           135deg,
-          rgba(255,255,255,0.08) 0,
-          rgba(255,255,255,0.08) 1px,
+          rgba(255,255,255,0.4) 0,
+          rgba(255,255,255,0.4) 1px,
           transparent 1px,
-          transparent 18px
+          transparent 24px
         );
-      opacity: 0.5;
+      opacity: 0.4;
     }
 
-    .icon {
-      width: 82px;
-      height: 82px;
-      display: grid;
-      place-items: center;
-      border-radius: 28px;
-      margin-bottom: 14px;
-      font-size: 40px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(240, 235, 225, 0.9));
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 4px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent) 0%, #c85763 72%, #d98a4f 100%);
+      box-shadow: 0 10px 18px rgba(141, 41, 64, 0.18);
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+    }
+
+    .brand-copy span {
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    .top-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 11px;
+      border-radius: 6px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-card,
+    .panel {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.92);
+      border-radius: 12px;
       box-shadow: var(--shadow);
-      animation: floaty 2.6s ease-in-out infinite;
     }
 
-    @keyframes floaty {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-5px); }
+    .hero-card {
+      overflow: hidden;
     }
 
-    h1 {
-      font-family: var(--font-display);
-      font-size: 27px;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      text-align: center;
-      color: var(--ink);
-      margin-bottom: 6px;
+    .hero-head {
+      padding: 20px 18px 16px;
+      background: linear-gradient(135deg, #8d2940 0%, #c85763 72%, #d98a4f 100%);
+      color: #fff;
+    }
+
+    .hero-head small {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      opacity: 0.86;
+      text-transform: uppercase;
+    }
+
+    .hero-head h1 {
+      margin-top: 8px;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.06;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-head p {
+      margin-top: 6px;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .hero-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .account-card {
+      padding: 18px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #8d2940 0%, #b24f5c 62%, #d98a4f 100%);
+      color: #fff;
+      box-shadow: 0 14px 24px rgba(141, 41, 64, 0.18);
+    }
+
+    .account-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .account-label {
+      font-size: 12px;
+      opacity: 0.82;
     }
 
     #mode {
-      font-size: 14px;
-      color: var(--ink-faint);
-      margin-bottom: 14px;
-      letter-spacing: 0.03em;
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 700;
     }
 
     .cash-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 38px;
-      padding: 0 16px;
-      border-radius: 999px;
-      margin-bottom: 18px;
-      font-size: 13px;
+      min-height: 34px;
+      padding: 0 14px;
+      border-radius: 6px;
+      font-size: 12px;
       font-weight: 700;
       letter-spacing: 0.03em;
       border: 1px solid transparent;
       transition: all 0.3s ease;
-      box-shadow: 0 10px 22px rgba(80, 66, 46, 0.08);
     }
 
     .cash-card {
-      background: rgba(27, 118, 160, 0.1);
-      color: #13607b;
-      border-color: rgba(27, 118, 160, 0.14);
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+      border-color: rgba(255,255,255,0.22);
     }
 
     .cash-cash {
-      background: var(--gold-soft);
-      color: #8a6325;
-      border-color: rgba(185, 133, 52, 0.18);
+      background: rgba(255,255,255,0.18);
+      color: #fff5d8;
+      border-color: rgba(255,255,255,0.22);
     }
 
     #status {
-      width: 100%;
-      max-width: 372px;
-      min-height: 92px;
-      padding: 18px 18px;
-      margin-bottom: 12px;
-      border-radius: 24px;
-      border: 1px solid rgba(255, 255, 255, 0.72);
-      background: linear-gradient(180deg, rgba(255, 253, 249, 0.95), rgba(248, 243, 236, 0.92));
-      box-shadow: var(--shadow);
-      font-size: 16px;
+      padding: 16px 16px;
+      border-radius: 6px;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      font-size: 15px;
       font-weight: 600;
-      line-height: 1.55;
+      line-height: 1.5;
       text-align: center;
       white-space: pre-line;
-      color: var(--ink);
+      color: var(--text);
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
     }
 
     #btn-recalibrate {
       width: 100%;
-      max-width: 250px;
       min-height: 46px;
-      margin-bottom: 24px;
-      border-radius: 999px;
-      border: 1px solid rgba(49, 63, 58, 0.12);
-      background: rgba(255, 255, 255, 0.56);
-      color: var(--accent-strong);
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--accent);
       font-size: 14px;
       font-weight: 700;
       letter-spacing: 0.03em;
+      box-shadow: var(--shadow-soft);
       cursor: pointer;
-      box-shadow: 0 12px 24px rgba(80, 66, 46, 0.08);
       transition: transform 0.15s ease, background 0.2s ease;
     }
 
     #btn-recalibrate:active {
       transform: translateY(1px);
-      background: rgba(255, 255, 255, 0.82);
+      background: #fafbfd;
+    }
+
+    .panel {
+      padding: 18px 14px 14px;
+    }
+
+    .panel-header {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 2px 4px 12px;
+    }
+
+    .panel-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+
+    .panel-subtitle {
+      font-size: 13px;
+      color: var(--text-faint);
     }
 
     .gestures {
-      width: 100%;
-      max-width: 390px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .mode-section {
-      padding: 16px 16px 10px;
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255, 253, 249, 0.92), rgba(247, 241, 233, 0.88));
-      border: 1px solid rgba(255, 255, 255, 0.7);
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
+      padding: 14px;
+      border-radius: 8px;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
     }
 
     .mode-label {
       display: flex;
       align-items: center;
       gap: 8px;
+      padding-bottom: 8px;
       font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 8px;
-      padding-left: 2px;
     }
 
     .gesture-row {
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      padding: 10px 2px;
+      padding: 10px 0;
       border-top: 1px solid var(--line);
       font-size: 14px;
       line-height: 1.45;
-      color: var(--ink-soft);
+      color: var(--text-soft);
     }
 
     .gesture-row:first-of-type {
@@ -208,132 +321,162 @@
     }
 
     .g-icon {
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       flex-shrink: 0;
       display: grid;
       place-items: center;
-      border-radius: 10px;
-      font-size: 15px;
-      background: rgba(24, 122, 99, 0.08);
-      color: var(--accent-strong);
+      border-radius: 4px;
+      background: #eef4fb;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
     }
 
     .g-label strong {
-      color: var(--ink);
-      font-weight: 800;
+      color: var(--text);
+      font-weight: 700;
     }
 
     @media (max-width: 420px) {
       body {
-        padding-left: 14px;
-        padding-right: 14px;
+        padding-left: 12px;
+        padding-right: 12px;
       }
 
-      h1 {
-        font-size: 24px;
+      .hero-card,
+      .panel {
+        border-radius: 12px;
       }
 
-      .icon {
-        width: 74px;
-        height: 74px;
-        font-size: 36px;
-      }
-
-      .mode-section {
-        padding: 14px 14px 8px;
+      .hero-head h1 {
+        font-size: 22px;
       }
     }
   </style>
 </head>
 <body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-copy">
+          <strong>Cartera</strong>
+          <span>Controlador inteligente</span>
+        </div>
+      </div>
+      <div class="top-chip">Control móvil</div>
+    </div>
 
-  <div class="icon">💳</div>
-  <h1>CARTERA INTELIGENTE</h1>
-  <p id="mode">Calibrando…</p>
+    <section class="hero-card">
+      <div class="hero-head">
+        <small>Operar con gestos</small>
+        <h1>Gestiona tus gastos al instante</h1>
+        <p>Una interfaz rápida para registrar, revisar y ajustar tu cartera.</p>
+      </div>
 
-  <div id="cash-indicator" class="cash-badge cash-card">💳 Tarjeta</div>
+      <div class="hero-body">
+        <div class="account-card">
+          <div class="account-row">
+            <div>
+              <div class="account-label">Estado actual</div>
+              <p id="mode">Calibrando…</p>
+            </div>
+            <div id="cash-indicator" class="cash-badge cash-card">Tarjeta</div>
+          </div>
+        </div>
 
-  <div id="status">🔄 Calibrando sensores…
+        <div id="status">Calibrando sensores…
 Mantén el móvil en posición normal (3 s)</div>
 
-  <button id="btn-recalibrate">🔄 Recalibrar sensores</button>
+        <div class="hero-actions">
+          <button id="btn-recalibrate">Recalibrar sensores</button>
+        </div>
+      </div>
+    </section>
 
-  <div class="gestures">
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Guía de uso</div>
+        <div class="panel-subtitle">Acciones disponibles según el modo del controlador</div>
+      </div>
 
-    <div class="mode-section">
-      <div class="mode-label">🟢 En espera (idle)</div>
-      <div class="gesture-row">
-        <span class="g-icon">📳</span>
-        <span class="g-label"><strong>Sacudir</strong> → registrar gasto</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">↑</span>
-        <span class="g-label"><strong>Inclinar adelante</strong> → modo revisión (Tinder)</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">↔</span>
-        <span class="g-label"><strong>Inclinar a los lados</strong> → cambiar método de pago</span>
-      </div>
-    </div>
+      <div class="gestures">
+        <div class="mode-section">
+          <div class="mode-label">En espera</div>
+          <div class="gesture-row">
+            <span class="g-icon">SH</span>
+            <span class="g-label"><strong>Sacudir</strong> → registrar gasto</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">↑</span>
+            <span class="g-label"><strong>Inclinar adelante</strong> → modo revisión (Tinder)</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">↔</span>
+            <span class="g-label"><strong>Inclinar a los lados</strong> → cambiar método de pago</span>
+          </div>
+        </div>
 
-    <div class="mode-section">
-      <div class="mode-label">🎤 Escuchando</div>
-      <div class="gesture-row">
-        <span class="g-icon">↓</span>
-        <span class="g-label"><strong>Inclinar atrás</strong> → cancelar grabación</span>
-      </div>
-    </div>
+        <div class="mode-section">
+          <div class="mode-label">Escuchando</div>
+          <div class="gesture-row">
+            <span class="g-icon">↓</span>
+            <span class="g-label"><strong>Inclinar atrás</strong> → cancelar grabación</span>
+          </div>
+        </div>
 
-    <div class="mode-section">
-      <div class="mode-label">📝 Confirmar gasto</div>
-      <div class="gesture-row">
-        <span class="g-icon">↑</span>
-        <span class="g-label"><strong>Inclinar adelante</strong> → confirmar y guardar</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">↓</span>
-        <span class="g-label"><strong>Inclinar atrás</strong> → descartar gasto</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">↔</span>
-        <span class="g-label"><strong>Inclinar a los lados</strong> → repetir grabación</span>
-      </div>
-    </div>
+        <div class="mode-section">
+          <div class="mode-label">Confirmar gasto</div>
+          <div class="gesture-row">
+            <span class="g-icon">↑</span>
+            <span class="g-label"><strong>Inclinar adelante</strong> → confirmar y guardar</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">↓</span>
+            <span class="g-label"><strong>Inclinar atrás</strong> → descartar gasto</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">↔</span>
+            <span class="g-label"><strong>Inclinar a los lados</strong> → repetir grabación</span>
+          </div>
+        </div>
 
-    <div class="mode-section">
-      <div class="mode-label">🃏 Modo revisión (Tinder)</div>
-      <div class="gesture-row">
-        <span class="g-icon">📳</span>
-        <span class="g-label"><strong>Sacudir</strong> → registrar nuevo gasto</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">→</span>
-        <span class="g-label"><strong>Inclinar derecha</strong> → me gusta</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">←</span>
-        <span class="g-label"><strong>Inclinar izquierda</strong> → no me gusta</span>
-      </div>
-      <div class="gesture-row">
-        <span class="g-icon">↓</span>
-        <span class="g-label"><strong>Inclinar atrás</strong> → salir de revisión</span>
-      </div>
-    </div>
+        <div class="mode-section">
+          <div class="mode-label">Modo revisión</div>
+          <div class="gesture-row">
+            <span class="g-icon">SH</span>
+            <span class="g-label"><strong>Sacudir</strong> → registrar nuevo gasto</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">→</span>
+            <span class="g-label"><strong>Inclinar derecha</strong> → me gusta</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">←</span>
+            <span class="g-label"><strong>Inclinar izquierda</strong> → no me gusta</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">↓</span>
+            <span class="g-label"><strong>Inclinar atrás</strong> → salir de revisión</span>
+          </div>
+        </div>
 
-    <div class="mode-section">
-      <div class="mode-label">💰 Tope de gasto (budget)</div>
-      <div class="gesture-row">
-        <span class="g-icon">↑</span>
-        <span class="g-label"><strong>Inclinar adelante</strong> → aceptar tope</span>
+        <div class="mode-section">
+          <div class="mode-label">Tope de gasto</div>
+          <div class="gesture-row">
+            <span class="g-icon">↑</span>
+            <span class="g-label"><strong>Inclinar adelante</strong> → aceptar tope</span>
+          </div>
+          <div class="gesture-row">
+            <span class="g-icon">↔</span>
+            <span class="g-label"><strong>Inclinar a los lados</strong> → editar tope</span>
+          </div>
+        </div>
       </div>
-      <div class="gesture-row">
-        <span class="g-icon">↔</span>
-        <span class="g-label"><strong>Inclinar a los lados</strong> → editar tope</span>
-      </div>
-    </div>
-
-  </div>
+    </section>
+  </main>
 
   <script src="/socket.io/socket.io.js"></script>
   <script type="module" src="./controller.js"></script>

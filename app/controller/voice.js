@@ -171,17 +171,17 @@ export function startListening(onResult, onError) {
   recognition = createRecognition();
 
   if (!recognition) {
-    const input = prompt('🎤 Voz simulada (ej: "café 2.50 efectivo"):');
+    const input = prompt('Voz simulada (ej: "cafe 2.50 efectivo"):');
     if (input) {
       const gasto = parseExpenseText(input);
       if (gasto) { onResult(gasto); }
-      else        { setStatus('⚠️ No se entendió — sacude para reintentar'); }
+      else        { setStatus('No se ha entendido\nSacude para reintentar'); }
     }
     return;
   }
 
   listening = true;
-  setStatus('🎤 Escuchando…');
+  setStatus('Escuchando...');
   vibrateDouble();
 
   // Lanzar geolocalización en paralelo para no bloquear
@@ -195,7 +195,7 @@ export function startListening(onResult, onError) {
       const gasto = parseExpenseText(transcript);
       if (gasto) {
         vibrateSuccess();
-        setStatus(`✅ "${gasto.product}" ${gasto.price}€\nObteniendo ubicación…`);
+        setStatus(`${gasto.product} | ${gasto.price}€\nObteniendo ubicacion...`);
         // Esperar la geolocalización (ya estaba en curso, debería ser rápida)
         const loc = await locationPromise;
         if (loc) {
@@ -203,23 +203,23 @@ export function startListening(onResult, onError) {
           gasto.lat = loc.lat;
           gasto.lon = loc.lon;
         }
-        setStatus(`✅ "${gasto.product}" ${gasto.price}€`);
+        setStatus(`${gasto.product} | ${gasto.price}€`);
         onResult(gasto);
         return;
       }
     }
     vibrateLong();
-    setStatus('⚠️ No se entendió — sacude de nuevo para reintentar');
+    setStatus('No se ha entendido\nSacude de nuevo para reintentar');
     console.warn('[Voice] Ninguna alternativa parseable');
   };
 
   recognition.onerror = (event) => {
     listening = false;
     if (event.error === 'no-speech' || event.error === 'aborted') {
-      setStatus('⚠️ No se detectó voz — sacude para reintentar'); return;
+      setStatus('No se ha detectado voz\nSacude para reintentar'); return;
     }
     vibrateLong();
-    setStatus(`❌ Error de voz: ${event.error}`);
+    setStatus(`Error de voz: ${event.error}`);
     console.error('[Voice] Error:', event.error);
     onError(event.error);
   };
@@ -237,17 +237,17 @@ export function startListeningAmount(onResult, onError) {
   recognition = createRecognition();
 
   if (!recognition) {
-    const input = prompt('🎤 Di una cantidad (ej: "200 euros"):');
+    const input = prompt('Di una cantidad (ej: "200 euros"):');
     if (input) {
       const amount = parseAmountText(input);
       if (amount) { onResult(amount); }
-      else         { setStatus('⚠️ No se entendió la cantidad'); onError('parse'); }
+      else         { setStatus('No se ha entendido la cantidad'); onError('parse'); }
     }
     return;
   }
 
   listening = true;
-  setStatus('🎤 Di la cantidad límite…');
+  setStatus('Di la cantidad limite...');
   vibrateDouble();
 
   recognition.onresult = (event) => {
@@ -258,20 +258,20 @@ export function startListeningAmount(onResult, onError) {
       const amount = parseAmountText(transcript);
       if (amount) {
         vibrateSuccess();
-        setStatus(`✅ Tope fijado: ${amount}€`);
+        setStatus(`Tope fijado: ${amount}€`);
         onResult(amount);
         return;
       }
     }
     vibrateLong();
-    setStatus('⚠️ No se entendió la cantidad');
+    setStatus('No se ha entendido la cantidad');
     onError('parse');
   };
 
   recognition.onerror = (event) => {
     listening = false;
     if (event.error === 'no-speech' || event.error === 'aborted') {
-      setStatus('⚠️ No se detectó voz'); return;
+      setStatus('No se ha detectado voz'); return;
     }
     vibrateLong(); onError(event.error);
   };
