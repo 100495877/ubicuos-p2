@@ -45,7 +45,7 @@
 
   let state = {
     mode: 'idle', gastos: [], pendingExpense: null,
-    tinderIndex: 0, defaultCash: false, budget: null,
+    tinderIndex: 0, tinderQueue: [], defaultCash: false, budget: null,
     categoryReputation: {},
   };
 
@@ -177,21 +177,24 @@
   }
 
   // ── Tarjeta Tinder ────────────────────────────────────────────────────────
-  function renderTinderCard(gastos, index) {
-    const g = gastos[index];
+  // FIX: usa tinderQueue (IDs de gastos sin revisar) en lugar del array completo
+  function renderTinderCard(gastos, tinderQueue, index) {
+    const gId = (tinderQueue || [])[index];
+    const g   = gId !== undefined ? gastos.find(x => x.id === gId) : null;
     if (!g) { showView('idle'); return; }
-    els.tcProduct.textContent      = (g.product || 'Gasto');
-    els.tcPrice.textContent        = fmt(g.price);
+    els.tcProduct.textContent = (g.product || 'Gasto');
+    els.tcPrice.textContent   = fmt(g.price);
     const category = g.category || '';
-    const rep      = state.categoryReputation[category];
-    const repBadge = rep === 'disliked' ? ' · categoria marcada' : rep === 'liked' ? ' · categoria valida' : '';
+    const rep      = state.categoryReputation && state.categoryReputation[category];
+    const repBadge = rep === 'disliked' ? ' · categoría marcada' : rep === 'liked' ? ' · categoría válida' : '';
     const metaParts = [
       g.cash ? 'Efectivo' : 'Tarjeta',
-      g.location ? 'Ubicacion: ' + g.location : null,
-      g.timestamp ? 'Fecha: ' + fmtDate(g.timestamp) : null,
+      g.location ? '📍 ' + g.location : null,
+      g.timestamp ? '🗓 ' + fmtDate(g.timestamp) : null,
     ].filter(Boolean);
     els.tcMeta.textContent         = metaParts.join(' · ') + repBadge;
-    els.tinderProgress.textContent = `${index + 1} / ${gastos.length}`;
+    // Progreso sobre la cola de sin revisar, no sobre gastos totales
+    els.tinderProgress.textContent = `${index + 1} / ${tinderQueue.length}`;
     els.tinderCard.classList.remove('anim-like', 'anim-dislike');
     els.likeIndicator.classList.remove('show');
     els.dislikeIndicator.classList.remove('show');
@@ -259,7 +262,7 @@
         showView('new_expense');
         break;
       case 'tinder':
-        renderTinderCard(state.gastos || [], state.tinderIndex || 0);
+        renderTinderCard(state.gastos || [], state.tinderQueue || [], state.tinderIndex || 0);
         showView('tinder');
         break;
       case 'budget':

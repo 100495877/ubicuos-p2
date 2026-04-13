@@ -16,57 +16,68 @@ let state = {
   gastos:             [],
   pendingExpense:     null,
   tinderIndex:        0,
+  tinderQueue:        [],       // sublista de IDs de gastos sin revisar en sesión tinder actual
   defaultCash:        false,
   budget:             null,     // null = sin tope, número = límite en €
   budgetAlerts:       [],       // umbrales ya notificados: [50, 75, 100]
-  categoryReputation: {},       // { [category]: 'liked'|'disliked' }
+  categoryReputation: {},
 };
 
 function broadcast(event, data) { io.emit(event, data); }
 function pushState()             { broadcast(EVENTS.STATE_UPDATE, state); }
 
 // ─── DETECCIÓN DE CATEGORÍA ──────────────────────────────────────────────────
-// Devuelve la categoría canónica del nombre de un producto, o 'otros'.
 function getCategory(productName) {
   const n = (productName || '').toLowerCase();
-  if (/café|coffee|bar|cerveza|vino|bebida|copa|trago/.test(n))           return 'bebidas';
-  if (/super|mercado|compr|aliment|fruta|carne|verdura/.test(n))          return 'alimentación';
-  if (/gasolin|carburante|parking|aparcamiento|gasolinera/.test(n))       return 'transporte';
-  if (/farmaci|medicina|médico|doctor|pastilla/.test(n))                  return 'salud';
+  if (/café|coffee|bar|cerveza|vino|bebida|copa|trago/.test(n))            return 'bebidas';
+  if (/super|mercado|compr|aliment|fruta|carne|verdura/.test(n))           return 'alimentación';
+  if (/gasolin|carburante|parking|aparcamiento|gasolinera/.test(n))        return 'transporte';
+  if (/farmaci|medicina|médico|doctor|pastilla/.test(n))                   return 'salud';
   if (/restaur|comida|pizza|kebab|sushi|hamburgues|cena|almuerzo/.test(n)) return 'restaurantes';
-  if (/ropa|zapatos|camisa|pantalon|vestido|abrigo|camiseta/.test(n))     return 'ropa';
-  if (/cine|teatro|música|concert|entrada|ocio/.test(n))                  return 'ocio';
-  if (/tren|metro|autobús|taxi|uber|transporte|bus/.test(n))              return 'transporte';
-  if (/libro|librería|curso|clase/.test(n))                               return 'educación';
-  if (/gym|gimnasio|deporte|entrenamiento/.test(n))                       return 'deporte';
+  if (/ropa|zapatos|camisa|pantalon|vestido|abrigo|camiseta/.test(n))      return 'ropa';
+  if (/cine|teatro|música|concert|entrada|ocio/.test(n))                   return 'ocio';
+  if (/tren|metro|autobús|taxi|uber|transporte|bus/.test(n))               return 'transporte';
+  if (/libro|librería|curso|clase/.test(n))                                return 'educación';
+  if (/gym|gimnasio|deporte|entrenamiento/.test(n))                        return 'deporte';
   return 'otros';
 }
 
 // ─── COMPROBACIÓN DE TOPE ─────────────────────────────────────────────────────
+// FIX: emitir SOLO la alerta del umbral más alto alcanzado que aún no se haya
+// notificado, y marcar todos los inferiores como notificados también.
+// Así si un gasto salta de 0€ a 150€ (tope 100€) solo se muestra "100% superado",
+// no la cascada 50% → 75% → 100%.
 function checkBudgetAlerts() {
   if (!state.budget || state.budget <= 0) return;
   const total = state.gastos.reduce((s, g) => s + (g.price || 0), 0);
   const pct   = (total / state.budget) * 100;
 
+  // Umbrales ordenados de mayor a menor para encontrar el más alto primero
   const thresholds = [
-    { pct: 100, label: 'Has superado el tope de gasto', level: 'danger' },
-    { pct: 75,  label: 'Llevas el 75% del tope de gasto', level: 'warning' },
-    { pct: 50,  label: 'Llevas el 50% del tope de gasto', level: 'info' },
+    { pct: 100, label: '🚨 Has superado el tope de gasto',    level: 'danger'  },
+    { pct: 75,  label: '⚠️ Llevas el 75% del tope de gasto', level: 'warning' },
+    { pct: 50,  label: '💡 Llevas el 50% del tope de gasto', level: 'info'    },
   ];
 
+  // Encontrar el umbral más alto que se haya superado y aún no notificado
+  const topHit = thresholds.find(t => pct >= t.pct && !state.budgetAlerts.includes(t.pct));
+  if (!topHit) return;
+
+  // Marcar como notificados TODOS los umbrales ≤ al alcanzado (evita cascada futura)
   for (const t of thresholds) {
-    if (pct >= t.pct && !state.budgetAlerts.includes(t.pct)) {
+    if (t.pct <= topHit.pct && !state.budgetAlerts.includes(t.pct)) {
       state.budgetAlerts.push(t.pct);
-      broadcast(EVENTS.BUDGET_ALERT, {
-        threshold: t.pct,
-        label:     t.label,
-        level:     t.level,
-        total,
-        budget:    state.budget,
-      });
-      console.log(`[Budget] Alerta ${t.pct}% — total: ${total.toFixed(2)}€ / ${state.budget}€`);
     }
   }
+
+  broadcast(EVENTS.BUDGET_ALERT, {
+    threshold: topHit.pct,
+    label:     topHit.label,
+    level:     topHit.level,
+    total,
+    budget:    state.budget,
+  });
+  console.log(`[Budget] Alerta ${topHit.pct}% — total: ${total.toFixed(2)}€ / ${state.budget}€`);
 }
 
 // ─── RUTAS ESTÁTICAS ──────────────────────────────────────────────────────────
@@ -90,11 +101,22 @@ io.on('connection', (socket) => {
   });
 
   // ── 2. ENTER_TINDER ───────────────────────────────────────────────────────
+  // FIX: solo entrar si hay gastos sin revisar (like === null)
   socket.on(EVENTS.ENTER_TINDER, () => {
     if (state.mode !== 'idle') return;
-    if (state.gastos.length === 0) { socket.emit(EVENTS.STATE_UPDATE, state); return; }
-    console.log(`[${id}] ENTER_TINDER`);
-    state.tinderIndex = 0; state.mode = 'tinder';
+
+    // Construir cola con solo los gastos aún no revisados
+    const sinRevisar = state.gastos.filter(g => g.like === null);
+    if (sinRevisar.length === 0) {
+      console.log(`[${id}] ENTER_TINDER — no hay gastos sin revisar`);
+      socket.emit(EVENTS.STATE_UPDATE, state); // refrescar sin cambiar modo
+      return;
+    }
+
+    console.log(`[${id}] ENTER_TINDER — ${sinRevisar.length} gastos sin revisar`);
+    state.tinderQueue = sinRevisar.map(g => g.id); // guardar IDs en orden
+    state.tinderIndex = 0;
+    state.mode        = 'tinder';
     pushState();
   });
 
@@ -104,32 +126,25 @@ io.on('connection', (socket) => {
     console.log(`[${id}] ENTER_BUDGET — tope actual: ${state.budget}`);
     state.mode = 'budget';
     pushState();
-
-    if (!state.budget) {
-      // Sin tope previo → pedir voz directamente
-      socket.emit(EVENTS.START_BUDGET_CAPTURE);
-    }
-    // Si hay tope previo, el display muestra opciones y esperamos
-    // CONFIRM (aceptar) o EDIT_BUDGET (editar)
+    if (!state.budget) socket.emit(EVENTS.START_BUDGET_CAPTURE);
   });
 
-  // ── 4. EDIT_BUDGET (tilt lateral en budget con tope existente) ────────────
+  // ── 4. EDIT_BUDGET ────────────────────────────────────────────────────────
   socket.on(EVENTS.EDIT_BUDGET, () => {
     if (state.mode !== 'budget') return;
     console.log(`[${id}] EDIT_BUDGET → pedir nueva cantidad`);
     socket.emit(EVENTS.START_BUDGET_CAPTURE);
   });
 
-  // ── 5. SET_BUDGET (voz procesada en móvil) ────────────────────────────────
+  // ── 5. SET_BUDGET ─────────────────────────────────────────────────────────
   socket.on(EVENTS.SET_BUDGET, (amount) => {
     if (state.mode !== 'budget') return;
     console.log(`[${id}] SET_BUDGET: ${amount}€`);
-    state.budget      = amount;
-    state.budgetAlerts = []; // resetear alertas con el nuevo tope
-    state.mode        = 'idle';
+    state.budget       = amount;
+    state.budgetAlerts = [];
+    state.mode         = 'idle';
     pushState();
     broadcast(EVENTS.CONFIRM, { budget: amount });
-    // Comprobar inmediatamente por si ya hay gastos
     checkBudgetAlerts();
   });
 
@@ -151,25 +166,13 @@ io.on('connection', (socket) => {
     if (state.mode === 'new_expense') {
       console.log(`[${id}] CONFIRM → guardar gasto`);
       if (state.pendingExpense) {
-        const g        = state.pendingExpense;
-        const category = getCategory(g.product);
-        g.category     = category;
-
+        const g    = state.pendingExpense;
+        g.category = getCategory(g.product);
         state.gastos.push(g);
-
-        // Alerta de categoría: emitir con delay para que el display
-        // haya procesado primero el state_update y vuelto a idle
-        if (state.categoryReputation[category] === 'disliked') {
-          const alertData = {
-            category,
-            product: g.product,
-            price:   g.price,
-            message: `Ya dijiste que no querías gastar en "${category}"`,
-          };
-          setTimeout(() => {
-            console.log(`[Server] ALERTA categoría: "${category}" tiene reputación negativa`);
-            broadcast('category_alert', alertData);
-          }, 400);
+        if (state.categoryReputation[g.category] === 'disliked') {
+          const alertData = { category: g.category, product: g.product, price: g.price,
+            message: `Ya dijiste que no querías gastar en "${g.category}"` };
+          setTimeout(() => broadcast('category_alert', alertData), 400);
         }
       }
       state.pendingExpense = null;
@@ -177,8 +180,8 @@ io.on('connection', (socket) => {
       pushState();
       broadcast(EVENTS.CONFIRM, {});
       checkBudgetAlerts();
+
     } else if (state.mode === 'budget') {
-      // Aceptar tope existente sin cambios
       console.log(`[${id}] CONFIRM en budget → aceptar tope ${state.budget}€`);
       state.mode = 'idle';
       pushState();
@@ -187,7 +190,6 @@ io.on('connection', (socket) => {
   });
 
   // ── 8. CANCEL ─────────────────────────────────────────────────────────────
-  // El modo 'budget' NO tiene cancel: el usuario solo puede confirmar o editar.
   socket.on(EVENTS.CANCEL, () => {
     if (state.mode === 'idle' || state.mode === 'budget') return;
     console.log(`[${id}] CANCEL (modo: ${state.mode})`);
@@ -220,16 +222,16 @@ io.on('connection', (socket) => {
   });
 
   // ── 11. MARK LIKE / DISLIKE ───────────────────────────────────────────────
+  // FIX: operar sobre tinderQueue en lugar de sobre gastos directamente por índice
   socket.on(EVENTS.MARK_LIKE, () => {
     if (state.mode !== 'tinder') return;
-    const g = state.gastos[state.tinderIndex];
+    const gId = state.tinderQueue[state.tinderIndex];
+    const g   = state.gastos.find(x => x.id === gId);
     if (g) {
-      g.like = true;
-      const cat = g.category || getCategory(g.product);
-      g.category = cat;
-      // Actualizar reputación: liked prevalece si antes era disliked
-      state.categoryReputation[cat] = 'liked';
-      console.log(`[${id}] LIKE → categoría "${cat}" → liked`);
+      g.like     = true;
+      g.category = g.category || getCategory(g.product);
+      state.categoryReputation[g.category] = 'liked';
+      console.log(`[${id}] LIKE "${g.product}" (cat: ${g.category})`);
     }
     pushState();
     broadcast(EVENTS.MARK_LIKE, { index: state.tinderIndex });
@@ -238,16 +240,15 @@ io.on('connection', (socket) => {
 
   socket.on(EVENTS.MARK_DISLIKE, () => {
     if (state.mode !== 'tinder') return;
-    const g = state.gastos[state.tinderIndex];
+    const gId = state.tinderQueue[state.tinderIndex];
+    const g   = state.gastos.find(x => x.id === gId);
     if (g) {
-      g.like = false;
-      const cat = g.category || getCategory(g.product);
-      g.category = cat;
-      // Guardar reputación negativa solo si no había liked previo en esta categoría
-      if (state.categoryReputation[cat] !== 'liked') {
-        state.categoryReputation[cat] = 'disliked';
-        console.log(`[${id}] DISLIKE → categoría "${cat}" → disliked`);
+      g.like     = false;
+      g.category = g.category || getCategory(g.product);
+      if (state.categoryReputation[g.category] !== 'liked') {
+        state.categoryReputation[g.category] = 'disliked';
       }
+      console.log(`[${id}] DISLIKE "${g.product}" (cat: ${g.category})`);
     }
     pushState();
     broadcast(EVENTS.MARK_DISLIKE, { index: state.tinderIndex });
@@ -258,10 +259,13 @@ io.on('connection', (socket) => {
 });
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
+// FIX: avanzar por tinderQueue, no por gastos completo
 function _advanceTinder() {
   state.tinderIndex++;
-  if (state.tinderIndex >= state.gastos.length) {
-    state.tinderIndex = 0; state.mode = 'idle';
+  if (state.tinderIndex >= state.tinderQueue.length) {
+    state.tinderIndex = 0;
+    state.tinderQueue = [];
+    state.mode        = 'idle';
   }
   pushState();
 }
