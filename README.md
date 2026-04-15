@@ -1,3 +1,9 @@
+Realizado por:
+100522277 - Jesús Fco. Rodríguez Villarroel
+100522343 - Diego Palmier Trapiella
+100495890 - Sergio Arbesu Álvarez
+100495877 - Íñigo Estebaranz Rosillo
+
 ----------------------------------MANUAL DE EJECUCIÓN----------------------------------
 
 REQUISITOS:
